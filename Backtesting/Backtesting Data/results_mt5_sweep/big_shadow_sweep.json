@@ -1,0 +1,437 @@
+{
+  "indicator": "Big Shadow",
+  "data_files": [
+    "EURUSD_H1_2020-2026-02-23.csv",
+    "GBPUSD_H1_2020-2026-02-23.csv",
+    "USDCAD_H1_2020-2026-02-23.csv",
+    "USDJPY_H1_2020-2026-02-23.csv"
+  ],
+  "ranked_results": [
+    {
+      "scenario_id": "bs_relaxed_d",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireOutsideBar": false,
+        "dominanceMode": "Previous 5 Candles",
+        "requireExtreme": false,
+        "useRoomLeftFilter": false,
+        "useZoneFilter": false,
+        "minRangeVsPrev": 1.05,
+        "minRangeAtr": 0.7,
+        "closeExtremeTicks": 20,
+        "closeExtremeAtr": 0.08,
+        "triggerMode": "Within N Candles",
+        "entryExpiryBars": 5
+      },
+      "total_entries": 4308,
+      "total_setups": 4995,
+      "total_closed_trades": 4308,
+      "total_net_r": -335.29,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1206,
+          "setups": 1422,
+          "closed_trades": 1206,
+          "win_rate_pct": 31.67,
+          "net_r": -118.78,
+          "avg_r": -0.098,
+          "max_drawdown_r": 126.94
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 988,
+          "setups": 1122,
+          "closed_trades": 988,
+          "win_rate_pct": 33.7,
+          "net_r": -57.77,
+          "avg_r": -0.058,
+          "max_drawdown_r": 70.24
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1253,
+          "setups": 1456,
+          "closed_trades": 1253,
+          "win_rate_pct": 35.12,
+          "net_r": -112.85,
+          "avg_r": -0.09,
+          "max_drawdown_r": 130.78
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 861,
+          "setups": 995,
+          "closed_trades": 861,
+          "win_rate_pct": 35.66,
+          "net_r": -45.89,
+          "avg_r": -0.053,
+          "max_drawdown_r": 65.12
+        }
+      ]
+    },
+    {
+      "scenario_id": "bs_relaxed_c",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireOutsideBar": false,
+        "dominanceMode": "Previous 5 Candles",
+        "requireExtreme": false,
+        "useRoomLeftFilter": false,
+        "useZoneFilter": false
+      },
+      "total_entries": 1978,
+      "total_setups": 2358,
+      "total_closed_trades": 1978,
+      "total_net_r": -160.22,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 521,
+          "setups": 655,
+          "closed_trades": 521,
+          "win_rate_pct": 31.09,
+          "net_r": -81.73,
+          "avg_r": -0.157,
+          "max_drawdown_r": 87.78
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 449,
+          "setups": 515,
+          "closed_trades": 449,
+          "win_rate_pct": 35.63,
+          "net_r": -23.73,
+          "avg_r": -0.053,
+          "max_drawdown_r": 30.03
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 652,
+          "setups": 768,
+          "closed_trades": 652,
+          "win_rate_pct": 38.34,
+          "net_r": -26.96,
+          "avg_r": -0.041,
+          "max_drawdown_r": 45.5
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 356,
+          "setups": 420,
+          "closed_trades": 356,
+          "win_rate_pct": 36.8,
+          "net_r": -27.8,
+          "avg_r": -0.078,
+          "max_drawdown_r": 32.29
+        }
+      ]
+    },
+    {
+      "scenario_id": "bs_relaxed_b",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireOutsideBar": false,
+        "dominanceMode": "Previous 5 Candles",
+        "requireExtreme": false,
+        "useRoomLeftFilter": false
+      },
+      "total_entries": 124,
+      "total_setups": 147,
+      "total_closed_trades": 124,
+      "total_net_r": -9.67,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 26,
+          "setups": 37,
+          "closed_trades": 26,
+          "win_rate_pct": 38.46,
+          "net_r": -2.19,
+          "avg_r": -0.084,
+          "max_drawdown_r": 4.49
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 36,
+          "setups": 37,
+          "closed_trades": 36,
+          "win_rate_pct": 30.56,
+          "net_r": -0.99,
+          "avg_r": -0.028,
+          "max_drawdown_r": 6.95
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 44,
+          "setups": 51,
+          "closed_trades": 44,
+          "win_rate_pct": 40.91,
+          "net_r": -3.01,
+          "avg_r": -0.068,
+          "max_drawdown_r": 5.58
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 18,
+          "setups": 22,
+          "closed_trades": 18,
+          "win_rate_pct": 50.0,
+          "net_r": -3.48,
+          "avg_r": -0.193,
+          "max_drawdown_r": 4.85
+        }
+      ]
+    },
+    {
+      "scenario_id": "bs_relaxed_a",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireOutsideBar": false,
+        "dominanceMode": "Previous 5 Candles",
+        "requireExtreme": false
+      },
+      "total_entries": 18,
+      "total_setups": 20,
+      "total_closed_trades": 18,
+      "total_net_r": -0.54,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 5,
+          "setups": 7,
+          "closed_trades": 5,
+          "win_rate_pct": 40.0,
+          "net_r": 0.34,
+          "avg_r": 0.067,
+          "max_drawdown_r": 2.0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 2,
+          "setups": 2,
+          "closed_trades": 2,
+          "win_rate_pct": 0.0,
+          "net_r": -1.0,
+          "avg_r": -0.5,
+          "max_drawdown_r": 1.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 6,
+          "setups": 6,
+          "closed_trades": 6,
+          "win_rate_pct": 16.67,
+          "net_r": 0.0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 1.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 5,
+          "setups": 5,
+          "closed_trades": 5,
+          "win_rate_pct": 80.0,
+          "net_r": 0.12,
+          "avg_r": 0.024,
+          "max_drawdown_r": 1.0
+        }
+      ]
+    },
+    {
+      "scenario_id": "bs_no_trend_no_session",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {},
+      "total_entries": 3,
+      "total_setups": 3,
+      "total_closed_trades": 3,
+      "total_net_r": 1.31,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1,
+          "setups": 1,
+          "closed_trades": 1,
+          "win_rate_pct": 100.0,
+          "net_r": 2.0,
+          "avg_r": 2.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 2,
+          "setups": 2,
+          "closed_trades": 2,
+          "win_rate_pct": 50.0,
+          "net_r": -0.69,
+          "avg_r": -0.343,
+          "max_drawdown_r": 1.0
+        }
+      ]
+    },
+    {
+      "scenario_id": "bs_strict",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": false,
+      "disable_session_filter": false,
+      "overrides": {},
+      "total_entries": 2,
+      "total_setups": 2,
+      "total_closed_trades": 2,
+      "total_net_r": 1.0,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1,
+          "setups": 1,
+          "closed_trades": 1,
+          "win_rate_pct": 100.0,
+          "net_r": 2.0,
+          "avg_r": 2.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1,
+          "setups": 1,
+          "closed_trades": 1,
+          "win_rate_pct": 0.0,
+          "net_r": -1.0,
+          "avg_r": -1.0,
+          "max_drawdown_r": 1.0
+        }
+      ]
+    },
+    {
+      "scenario_id": "bs_no_trend",
+      "indicator": "Big Shadow",
+      "disable_trend_filter": true,
+      "disable_session_filter": false,
+      "overrides": {},
+      "total_entries": 2,
+      "total_setups": 2,
+      "total_closed_trades": 2,
+      "total_net_r": 1.0,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1,
+          "setups": 1,
+          "closed_trades": 1,
+          "win_rate_pct": 100.0,
+          "net_r": 2.0,
+          "avg_r": 2.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "bars": 38247,
+          "entries": 1,
+          "setups": 1,
+          "closed_trades": 1,
+          "win_rate_pct": 0.0,
+          "net_r": -1.0,
+          "avg_r": -1.0,
+          "max_drawdown_r": 1.0
+        }
+      ]
+    }
+  ]
+}

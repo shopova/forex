@@ -1,0 +1,335 @@
+{
+  "generated_at_utc": "2026-03-20T09:51:32.759194+00:00",
+  "timezone": "Europe/Sofia",
+  "pairs": {
+    "EURUSD": {
+      "state": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "reasons": [
+        "Iran and Hormuz / Al Jazeera: Kuwait oil refinery hit again as Iran targets Gulf energy infrastructure - Al Jazeera",
+        "Iran and Hormuz / Bloomberg.com: How Iran Has Effectively Closed the Strait of Hormuz - Bloomberg.com",
+        "Iran and Hormuz / Al Jazeera: Iran war: What is happening on day 21 of US-Israel attacks? - Al Jazeera",
+        "Trump policy headlines / Bloomberg.com: US Soy Ships Pile Into China as Trump Summit Delay Clouds Trade - Bloomberg.com",
+        "Trump policy headlines / Bloomberg.com: Iran Defies Trump With Energy Strikes As War Costs Rise - Bloomberg.com",
+        "Trump policy headlines / Bloomberg.com: Trump References Pearl Harbor as Iran War Tests US-Japan Alliance - Bloomberg.com",
+        "Central bank and intervention risk / CNBC: European stocks rebound as oil eases and investors bet on rate hikes - CNBC",
+        "Central bank and intervention risk / Bloomberg.com: Economists Pivot to See ECB Hikes While Diverging on First Move - Bloomberg.com",
+        "Central bank and intervention risk / Reuters: Bank of England to raise interest rates in April, July on inflation risks, J.P. Morgan says - Reuters",
+        "Oil and OPEC shock / Reuters: China's Sinochem cuts refinery runs, seeks prompt-delivery crude, sources say - Reuters",
+        "Oil and OPEC shock / CNBC: Dollar toppled as oil shock turns central banks hawkish - CNBC",
+        "Oil and OPEC shock / Bloomberg.com: China\u2019s Record Deflation Finds Dangerous Cure in Oil Shock - Bloomberg.com",
+        "EU political and sovereign stress / Reuters: Germany's Merz faces second state election test on Sunday - Reuters",
+        "EU political and sovereign stress / Reuters: France's budget constraints hamper fiscal response to Middle East crisis, Villeroy says - Reuters",
+        "EU political and sovereign stress / Reuters: Umberto Bossi, firebrand founder of Italy's Northern League party, dies at 84 - Reuters"
+      ]
+    },
+    "USDJPY": {
+      "state": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "reasons": [
+        "Iran and Hormuz / Al Jazeera: Kuwait oil refinery hit again as Iran targets Gulf energy infrastructure - Al Jazeera",
+        "Iran and Hormuz / Bloomberg.com: How Iran Has Effectively Closed the Strait of Hormuz - Bloomberg.com",
+        "Iran and Hormuz / Al Jazeera: Iran war: What is happening on day 21 of US-Israel attacks? - Al Jazeera",
+        "Trump policy headlines / Bloomberg.com: US Soy Ships Pile Into China as Trump Summit Delay Clouds Trade - Bloomberg.com",
+        "Trump policy headlines / Bloomberg.com: Iran Defies Trump With Energy Strikes As War Costs Rise - Bloomberg.com",
+        "Trump policy headlines / Bloomberg.com: Trump References Pearl Harbor as Iran War Tests US-Japan Alliance - Bloomberg.com",
+        "Central bank and intervention risk / CNBC: European stocks rebound as oil eases and investors bet on rate hikes - CNBC",
+        "Central bank and intervention risk / Bloomberg.com: Economists Pivot to See ECB Hikes While Diverging on First Move - Bloomberg.com",
+        "Central bank and intervention risk / Reuters: Bank of England to raise interest rates in April, July on inflation risks, J.P. Morgan says - Reuters",
+        "Oil and OPEC shock / Reuters: China's Sinochem cuts refinery runs, seeks prompt-delivery crude, sources say - Reuters",
+        "Oil and OPEC shock / CNBC: Dollar toppled as oil shock turns central banks hawkish - CNBC",
+        "Oil and OPEC shock / Bloomberg.com: China\u2019s Record Deflation Finds Dangerous Cure in Oil Shock - Bloomberg.com",
+        "China Taiwan Asia risk / Reuters: China poses pressing threat, deterrence needed to avert invasion, Taiwan says - Reuters",
+        "China Taiwan Asia risk / WSJ: China Isn\u2019t Planning to Invade Taiwan in 2027, U.S. Concludes - WSJ"
+      ]
+    },
+    "GBPUSD": {
+      "state": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "reasons": [
+        "Iran and Hormuz / Al Jazeera: Kuwait oil refinery hit again as Iran targets Gulf energy infrastructure - Al Jazeera",
+        "Iran and Hormuz / Bloomberg.com: How Iran Has Effectively Closed the Strait of Hormuz - Bloomberg.com",
+        "Iran and Hormuz / Al Jazeera: Iran war: What is happening on day 21 of US-Israel attacks? - Al Jazeera",
+        "Trump policy headlines / Bloomberg.com: US Soy Ships Pile Into China as Trump Summit Delay Clouds Trade - Bloomberg.com",
+        "Trump policy headlines / Bloomberg.com: Iran Defies Trump With Energy Strikes As War Costs Rise - Bloomberg.com",
+        "Trump policy headlines / Bloomberg.com: Trump References Pearl Harbor as Iran War Tests US-Japan Alliance - Bloomberg.com",
+        "Central bank and intervention risk / CNBC: European stocks rebound as oil eases and investors bet on rate hikes - CNBC",
+        "Central bank and intervention risk / Bloomberg.com: Economists Pivot to See ECB Hikes While Diverging on First Move - Bloomberg.com",
+        "Central bank and intervention risk / Reuters: Bank of England to raise interest rates in April, July on inflation risks, J.P. Morgan says - Reuters",
+        "Oil and OPEC shock / Reuters: China's Sinochem cuts refinery runs, seeks prompt-delivery crude, sources say - Reuters",
+        "Oil and OPEC shock / CNBC: Dollar toppled as oil shock turns central banks hawkish - CNBC",
+        "Oil and OPEC shock / Bloomberg.com: China\u2019s Record Deflation Finds Dangerous Cure in Oil Shock - Bloomberg.com",
+        "UK political and gilt stress / Reuters: UK budget deficit jumped in February as Iran war darkens fiscal outlook - Reuters",
+        "UK political and gilt stress / Financial Times: Can Reeves overcome the sceptics on fiscal devolution? - Financial Times",
+        "UK political and gilt stress / Bloomberg.com: Bank of England Hits Reverse as White House Drives UK Rate Moves - Bloomberg.com"
+      ]
+    }
+  },
+  "scheduled_events": [],
+  "headline_blocks": [
+    {
+      "feed_name": "Iran and Hormuz",
+      "title": "Kuwait oil refinery hit again as Iran targets Gulf energy infrastructure - Al Jazeera",
+      "source": "Al Jazeera",
+      "link": "https://news.google.com/rss/articles/CBMiswFBVV95cUxQenE2Nm1hLVRSTkNsN0l3U1NfQ0JvQ0ZtRlV0OHdWeEFkelJOQWV3NjhWWjY0Z0k4WFo4S0xzb1pFOG9sM2Q4a3pOdHByeHhEcXZRd3VscFhMX09lWHk3STdnSlAtcW5XQzlhTTBNV0VkOVpDYnJzbm1Lc0k0Z3ZCc1czZjl0d2lKM3U0eTN3ZzJmYy1YSWR3UlVhSG5IRHplSTUwRW9oalZkdE5OeXd1MDBwQdIBuAFBVV95cUxQcnZLU3JocUY2LWY3Mk9sQ1o0aFNHVU41ZmNWWnd3SVk4cVhSQlVKdkUycS1Ka2kzNG9fNEJBcDRPRkdMcUtSd2ZpaGI1b1oyOV9JaXBaSGY2NU16VHpHel9JYk5VZDBwU25MelR0aTRJdVU4VVZ0QlEtVER5QXJlUHNvcFRvM1Q4WlBIS3lGMXBKd1o1MmJRRmJCU0xjenlIN3o2Nl9VRE9mdjVzTHV0ODBfQnlzQkJN?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Iran and Hormuz / Al Jazeera: Kuwait oil refinery hit again as Iran targets Gulf energy infrastructure - Al Jazeera"
+    },
+    {
+      "feed_name": "Iran and Hormuz",
+      "title": "How Iran Has Effectively Closed the Strait of Hormuz - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMixwFBVV95cUxOSUpyWGNGRkc5alFSYjcwcEpLUVNuWThwQ1BmQXBwZS1zNHdlOEFGMnR6NTFUMDAxOFpkUldyQVQ1VjNZNXhQNDZXNmVZM2p5X1dCdUxqTzZiNU56bFk4QXhQSlhFZ3liMEVOOFNWcDVCMDBjWXJRanFyMnZLam9OY1BHYkhHNmU1YW52V1JmNFctc1FPSWZtTU5YVjk2Ym0xYnlRUmdTTkNmSzlxMlJSRzVyZko5VTVDZHBQNkFpNHdoeUdSSUFr?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Iran and Hormuz / Bloomberg.com: How Iran Has Effectively Closed the Strait of Hormuz - Bloomberg.com"
+    },
+    {
+      "feed_name": "Iran and Hormuz",
+      "title": "Iran war: What is happening on day 21 of US-Israel attacks? - Al Jazeera",
+      "source": "Al Jazeera",
+      "link": "https://news.google.com/rss/articles/CBMinwFBVV95cUxOMVplSVdjTm4tbWcwdXNSODJvWXktek1xU1l1Q2tKUjA2TFhQcHRyMXA3OExpT0JtUmZzcjNXVHVtRGpvTGsyVVF0di1YS21qSFZuVTEzcGFLamlaaGNKaDBKamgyUVpFbGEyNzJRcEc5eFhzdDlJR2dRYUFRUFprOFRlTnRJOU8xZVNjTlVNMkpxdFhmeVlBSzNBMWJsWjTSAaQBQVVfeXFMTVloSGdjakNGam1xRmdsMmNwWkZqbzlkQnVUM3gyQjZsYWNOMXNualZBYjdOM0tIRi1DMTdLYXVqQnE3cjluU2lWdTVVNHYtNnlZbFNSNVF5azVJY2V2UXhIX3BLUGtoVU9MWFZpVXhUanJIUVk4ZmVuOWdjb0F2S2hHQzh3LUR5ejZ6N0N5RWdMRzRoV1dZUnZPd1pqaXY3YU1mM2E?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Iran and Hormuz / Al Jazeera: Iran war: What is happening on day 21 of US-Israel attacks? - Al Jazeera"
+    },
+    {
+      "feed_name": "Trump policy headlines",
+      "title": "US Soy Ships Pile Into China as Trump Summit Delay Clouds Trade - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxOUDQ4bXhJUEZjVkdyZ3BkLThfLWg1OUdQQjhnd1A4UGN6WU00UVFoWUhDYW5MUjNnR3FxS3hPYVhWMXRYbnQwMENvWTNQWGp3dHlnazJ4bGVINldzRS1qSFdTN1cwNklxWlNDMjItNTBZWnVWRlB5NWRnR0RUS3dzMHBEWU9NOWtadUVORndLSEU2MThiLXZ1X3FrWktJU2FkdGlrY2JwRENobi02NWZsbXJtQ0Q?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Trump policy headlines / Bloomberg.com: US Soy Ships Pile Into China as Trump Summit Delay Clouds Trade - Bloomberg.com"
+    },
+    {
+      "feed_name": "Trump policy headlines",
+      "title": "Iran Defies Trump With Energy Strikes As War Costs Rise - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxNczRadVVLMDByNy1KXy1VRzVfRnkwOHVEZDM1X3M4SlJ4V0JiMzhveDgzU0xrVHpYOW9EY19BbmM5ZjNhSWxTOWZJZDFtSnE0UVVZRlNkMUZSWXZsWWpuOEhXa3U0Mjdzbm56UGYwQlg3UEV1cHZMREdKUEZyVFhBcUc1RmFoSHRXUkJpTnBGNVNkamxzRHlHZW9OWV9vRGo4YnFFa2dmUjVLYWZGbVA5a19R?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Trump policy headlines / Bloomberg.com: Iran Defies Trump With Energy Strikes As War Costs Rise - Bloomberg.com"
+    },
+    {
+      "feed_name": "Trump policy headlines",
+      "title": "Trump References Pearl Harbor as Iran War Tests US-Japan Alliance - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQcjZSOVJSM0xUVFZVZHJ2MHg4czZ1OXFvOVdPVFNqTDZycGhXRENYOFE4M1RpODl6TXpqWlRLMkFTdnhaUXVqVDJKRmNjdTI3U2tLN0xmOXUwd2tyeHRtalRaQUNvUkpIVlhKenFoeTdmUnJPMXJoYUZQYnoxbkYzalAyV25ENnMza1IyeGhUOVpxR09xMEppY1YwaWpvUmMwTlRyQ1FWU25QRzdQUHRvdHB3?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Trump policy headlines / Bloomberg.com: Trump References Pearl Harbor as Iran War Tests US-Japan Alliance - Bloomberg.com"
+    },
+    {
+      "feed_name": "Central bank and intervention risk",
+      "title": "European stocks rebound as oil eases and investors bet on rate hikes - CNBC",
+      "source": "CNBC",
+      "link": "https://news.google.com/rss/articles/CBMitwFBVV95cUxNclk0Z1dHa09JVUVTVEs0ay1aSk51bl80Mnk2T2hDOFlEcGZoVEw3dXFNbU1EZm9JMW5QV1NyUkFoSF9qcE1WSWlKN0laWThKSzMyY1VIbkRqZFMzRkNrRUFRRWl0Vl93YzIyT3pzUlMyaDZWMzBaM3lBNVR5QURFbURuYmdaOGx1X3BMM19SSWJxbmI3NS1fdnFDRkw2RHoxc2FzbU5PdnVTRkdhUHFTelFZcXRUNjjSAbwBQVVfeXFMUGFwbWc2c3Uyb2tJam9fRXdTVkpYSk9yZHAzYlJWbkpGMjRKenNOM2tyT3pMOFBPeldzWnJydU91RFctWVEwLWZtR0JGSGd6MEp6ZngxSXJFMmtPYzBzSU1UR0hudTd6eDNDXzlSQ1M5Y3Bma0sxSTl4el84Tk5BRzBaWFptLUM3Ti0zTHpjV1Z0RW5EZW15QTVrV29nMkYwcE8yQlVDS3N4cG1YbmtvTGx6U3dwamszaUNXQUg?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Central bank and intervention risk / CNBC: European stocks rebound as oil eases and investors bet on rate hikes - CNBC"
+    },
+    {
+      "feed_name": "Central bank and intervention risk",
+      "title": "Economists Pivot to See ECB Hikes While Diverging on First Move - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitAFBVV95cUxPVER5Zl9SM1B1ejdicnNPV21ma0lXMEtuV0RjOE9JZnpLSHNCUmVKRUh5TnFGUHBiZ1J1UXFkOEJTcFV0alN5blI3RjNvVnFUZmlqSWVxZmNONFRJOThPUVRrQ2lpeGZ1bXhMdEhiUEthbkR3LVY4Z2lFamtDSlNnY3M3djF0UWFjeEZaQzU5ODlnTzdtQ1BwNDQxVW1CeU1rUXgtc1RWZ0h0aVFaTS1Ya09YQzQ?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Central bank and intervention risk / Bloomberg.com: Economists Pivot to See ECB Hikes While Diverging on First Move - Bloomberg.com"
+    },
+    {
+      "feed_name": "Central bank and intervention risk",
+      "title": "Bank of England to raise interest rates in April, July on inflation risks, J.P. Morgan says - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOZDBhWGlGeTgydF9ja3RfMDQ4XzBEdkloR2o1REdJQkNwdWZHYnVTRWFwNjRkNmllNjdobjVYeHFrdEFUdDdyaEFERjEtMV9sYWN2dGtibE04MThVMGUxX1RXczRRdkZaWXJhdG5HQVVsdjJseU91dVhwb2NnSnVGQk1XS014X0JreWlzWGpPb0lwSV9wVjA4dHZXNXZ1RDRVVzFfb1YxRjlHYUFZaUVj?oc=5",
+      "severity": "RED",
+      "blocked_until_utc": "2026-03-20T10:51:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Central bank and intervention risk / Reuters: Bank of England to raise interest rates in April, July on inflation risks, J.P. Morgan says - Reuters"
+    },
+    {
+      "feed_name": "Oil and OPEC shock",
+      "title": "China's Sinochem cuts refinery runs, seeks prompt-delivery crude, sources say - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMixAFBVV95cUxNZmJXR1pVd093T2x2MloyX2dqTVc0Z1pZODR5NXJ6WkxIcHY2Ti1uamVtU0Y5eFFVcVdZUTBqMjUzY25nRlVuMzB1RUNGMUlRWFR4a3hTWG52ckwwbi11WFJSek1OeE1wWkFHQXNoZGRrak1XMThaS1UwaTA0aXR1TG9TUFFVMVBNcXAwWG1VUnh4bjB0dlV5OTB1VzdxRkE5cGktWUFPQlAxOTFOZ0tpRFo0c2FNOXJWT0Jqa3RUSUZ4cmJW?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Oil and OPEC shock / Reuters: China's Sinochem cuts refinery runs, seeks prompt-delivery crude, sources say - Reuters"
+    },
+    {
+      "feed_name": "Oil and OPEC shock",
+      "title": "Dollar toppled as oil shock turns central banks hawkish - CNBC",
+      "source": "CNBC",
+      "link": "https://news.google.com/rss/articles/CBMinAFBVV95cUxPS2hpZWUyR0lMeWlTZE5MRkZHbzF1T0E2NDB5WTgzZEwyS0NwSXFHOWk4OXpIYk1MRE5HWGt5LXJpcGpad0lBSmJ6R2l2YkYtTUlHVlhiekM0bncxUnQ0am1tMUZvSW45eElrYW1DbTk3REFmbUVaTk0wb3JvSUxfRU9IUjB5UzRPS0N5Y3JiMXNpRFVwZ0VHc2Rid3nSAZwBQVVfeXFMT0toaWVlMkdJTHlpU2ROTEZGR28xdU9BNjQweVk4M2RMMktDcElxRzlpODl6SGJNTEROR1hreS1yaXBqWndJQUpiekdpdmJGLU1JR1ZYYnpDNG53MVJ0NGptbTFGb0luOXhJa2FtQ205N0RBZm1FWk5NMG9yb0lMX0VPSFIweVM0T0tDeWNyYjFzaURVcGdFR3NkYnd5?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Oil and OPEC shock / CNBC: Dollar toppled as oil shock turns central banks hawkish - CNBC"
+    },
+    {
+      "feed_name": "Oil and OPEC shock",
+      "title": "China\u2019s Record Deflation Finds Dangerous Cure in Oil Shock - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNYUVhaEU3MzNsSjU2OTNFdWJiZlE4eFJEanowQnpINy1ZdzFFZ1Nic0RfVENOUG0wRzJTWVFBMDN1bU5qOFM1QUZ2VkJpSk5wUzNYTWZEQWJzLXQtT1c5elF0VzF3cXZMYS1TS2dQdUNEemx1ZVJNSHBLdlhIWDNYWHF5RFpzVWFlOVpzUTFaYlZVNnBNUklueDNWSGZBY0lzbmxZUkV6Z1dVUDlhbUxCdDVaWVZ3UQ?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "reason": "Oil and OPEC shock / Bloomberg.com: China\u2019s Record Deflation Finds Dangerous Cure in Oil Shock - Bloomberg.com"
+    },
+    {
+      "feed_name": "China Taiwan Asia risk",
+      "title": "China poses pressing threat, deterrence needed to avert invasion, Taiwan says - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMivAFBVV95cUxQZVd1eklieURyeGotOTZJRkhWV0J5eWF4TndFcl9RYjlYZ0JlcjV0QmtkbXFOVWRVQXRLbTRWS2FsY2xUYzJrVHpFRGcxclpZeVZGeFpDM3F6MmFWNVlGR053WHRzM2FEdERSN1YwbWRpd3V1bjk4bTVJdnNvOXFYejJ1QjY4TFZCeVVReml0RXVrS0NxMWFNTjFxQ084RGtqc1NHY0dBd1RweVdYM2Q2dllGQ3Q0WjVFNnpENQ?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "USDJPY"
+      ],
+      "reason": "China Taiwan Asia risk / Reuters: China poses pressing threat, deterrence needed to avert invasion, Taiwan says - Reuters"
+    },
+    {
+      "feed_name": "China Taiwan Asia risk",
+      "title": "China Isn\u2019t Planning to Invade Taiwan in 2027, U.S. Concludes - WSJ",
+      "source": "WSJ",
+      "link": "https://news.google.com/rss/articles/CBMipgNBVV95cUxOMXFkUVNXb0k5bmJYbVVsNnBwYlN2ekNaekFhMElmdjBpT2NpNXBFbGJoRTdJNVo1Y0NuNWN2b0JFdi15SlEzblEzVnRmU3BQYm5zSDJwb1VUT01GOEgtWlp1NEtkbklOa2hDeWJ2QkpMTkl3bnk1V09xQmFndjRFMTk5czBNMUFWZXp6eUEtRnBQNldQVy1NdzJxei1JWlJDbzAzbGJjam1xa08wQ3ZJcU52Q2h2Uk9MM1czWDVqZ1JfMVlxWHJoMEpod0ZFZ1BqSGZ0Wl8tY3o4QVVmZzJuLVZmeUkwWVVWenNZaDY2WVRxY25wRVRTOEtLRzNhNWJjalh5Z3BlU0NYeTd3RElyMnlnU2V4cFdyeFlnVlhQTXFqT0FXNndlM1RWOGtaVEtwWWJNWUNYNXU3Vy00YkE3NGhUM0otYUk2bF9Dcklfa2N0R29tblFzWHRLOEdTUmxSdy1CM3lhTF9rdFp2OWJ2V014WmJqS0s2WTc5ZVJ5WUtFZVdCRDFVNjZMQ2NrcGFlSUVTZ21HWDVFYm1NNkVhSHVYN25fQQ?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "USDJPY"
+      ],
+      "reason": "China Taiwan Asia risk / WSJ: China Isn\u2019t Planning to Invade Taiwan in 2027, U.S. Concludes - WSJ"
+    },
+    {
+      "feed_name": "EU political and sovereign stress",
+      "title": "Germany's Merz faces second state election test on Sunday - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMipAFBVV95cUxPa1hiVmhIaDBsV0dDY3RDcU9TWVc4b2gtUUJEWFlaUndLZEMzb2ZtYmVOM0tBajZ1ZlR2MGdwRkxYNWlpbDFNcHJ0VW9NTmo4SzhIR0R1dDZ6LVZkeXh6QkEzS3FzbnZ4RmFhVVF6ZlE4WHJaNjBXVGZ3MmxyTUV2cmE0U0dEQlA3a0d4dlA4UV95RUluU3l6cnRUdE9iYjBfUVF3Mw?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD"
+      ],
+      "reason": "EU political and sovereign stress / Reuters: Germany's Merz faces second state election test on Sunday - Reuters"
+    },
+    {
+      "feed_name": "EU political and sovereign stress",
+      "title": "France's budget constraints hamper fiscal response to Middle East crisis, Villeroy says - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMiygFBVV95cUxOT2FBSFh2NlRIVDJoUVJnSmo2X2Y0MFB6Y1NrWVJaanotVE9CeWlyRVZRX1BwTkpPbGE3QWxrSnc5ZjJIbTlBN1RJM0JxdkRKczhUSmo5YWpCV21ZZnBmUXN1Y0NzODh6R3NqX3dZTkl5b1M5UUlCMjVhSHF5ZWtXdjFGYWpXM3dxaDczekNPQnhObk15eFBMNFF4TzVuVG9CM25Lc2RzQm5Fc1pkMlFteVRGZllWUTA1OGlwdXVkUzdPQWUyQmF1eC13?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD"
+      ],
+      "reason": "EU political and sovereign stress / Reuters: France's budget constraints hamper fiscal response to Middle East crisis, Villeroy says - Reuters"
+    },
+    {
+      "feed_name": "EU political and sovereign stress",
+      "title": "Umberto Bossi, firebrand founder of Italy's Northern League party, dies at 84 - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNbUV1NzNJRkNTNllaRFVXZVFhVG4ydXEtYUNnOVd4dG84U3R6VE9DU3p3b2pXT001RkFuZTRKR2JIYk0wLVhSdTZsSE5wU3dldTRYQ2RFMWUyNFFBWFRKZGdtQktEc3JkeXVKMWpfYWkzelhSWUkxMHNBbnNOUHc1QUNnT29mR3VMRkwyT3VwalFZa1U1V0MzMkpON282MTVyMXJyR0hFNmxkbGFxLXlV?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "EURUSD"
+      ],
+      "reason": "EU political and sovereign stress / Reuters: Umberto Bossi, firebrand founder of Italy's Northern League party, dies at 84 - Reuters"
+    },
+    {
+      "feed_name": "UK political and gilt stress",
+      "title": "UK budget deficit jumped in February as Iran war darkens fiscal outlook - Reuters",
+      "source": "Reuters",
+      "link": "https://news.google.com/rss/articles/CBMirwFBVV95cUxOcjdMeVFqcnhTYklSeEw0bmtmcjBwbVBzajdVRlZkYmNLeTZIdHpFSmdqU0ptVjdNU0dnLU1zQmZxZDJpLVFJZktWOHBaNk9CSlRxLW1iWmNGNzVFMzlEUUZYMWZGeF9YaGJTTFZUeEJ2eW5GTWhXNzFZYTJ3aDRSYWRvNUloY1Z0ZkNXTUlub3Q2bEFJbFVjZ3M2dEw2UGVkS2NrSERpZTVKdXJLS2V3?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "GBPUSD"
+      ],
+      "reason": "UK political and gilt stress / Reuters: UK budget deficit jumped in February as Iran war darkens fiscal outlook - Reuters"
+    },
+    {
+      "feed_name": "UK political and gilt stress",
+      "title": "Can Reeves overcome the sceptics on fiscal devolution? - Financial Times",
+      "source": "Financial Times",
+      "link": "https://news.google.com/rss/articles/CBMihAFBVV95cUxPM2d0SHYwYXJrZ2JyclA3RFVMWHJnY1lBR21YbzlDZGNvemRfZ3dLUUJvTFVEZFJVaGJWcldleHNCVHV5bUZULWFLa0lEd01EMDd5TGx3WWQxSWM4aE12NWJXLWNUUVBxcUFtUXUzMnZWUHAyNGFrZXB2SkNleFBOMktiYlA?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "GBPUSD"
+      ],
+      "reason": "UK political and gilt stress / Financial Times: Can Reeves overcome the sceptics on fiscal devolution? - Financial Times"
+    },
+    {
+      "feed_name": "UK political and gilt stress",
+      "title": "Bank of England Hits Reverse as White House Drives UK Rate Moves - Bloomberg.com",
+      "source": "Bloomberg.com",
+      "link": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQbFlHbWdfdUdvSkhtRlFMbDlpX29CSFNfNUVpRFVtblAwTmUxRERqVEU1SG91LUtwNzNrS1JTUURWRkx3aGQ4Y3QwRmYxRkVkMGJZSV9iWE5YcVJaZXpLTDdaN3M2OWRWZndhQjVkZUNKNFpSUUVEYmNJTFBxbkRsNlJraTU2ZElycmhxcTZKRzd4aHFFd3F4ankwY2c0a2phNzFXWGhCQkl1M3ZPQUdhQUVUWDBIZw?oc=5",
+      "severity": "AMBER",
+      "blocked_until_utc": "2026-03-20T10:36:32.759194+00:00",
+      "pairs": [
+        "GBPUSD"
+      ],
+      "reason": "UK political and gilt stress / Bloomberg.com: Bank of England Hits Reverse as White House Drives UK Rate Moves - Bloomberg.com"
+    }
+  ]
+}

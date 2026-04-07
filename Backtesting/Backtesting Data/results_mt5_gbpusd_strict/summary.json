@@ -1,0 +1,53 @@
+{
+  "source_csv": "Backtesting Data/GBPUSD_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 1e-05,
+  "disable_trend_filter": false,
+  "disable_session_filter": false,
+  "results": [
+    {
+      "indicator": "Last Kiss",
+      "setups": 60,
+      "entries": 51,
+      "canceled_setups": 614,
+      "closed_trades": 42,
+      "wins": 14,
+      "losses": 28,
+      "breakeven": 0,
+      "win_rate_pct": 33.33,
+      "net_r": 0.0,
+      "avg_r": 0.0,
+      "max_drawdown_r": 5.0
+    },
+    {
+      "indicator": "Big Shadow",
+      "setups": 0,
+      "entries": 0,
+      "canceled_setups": 0,
+      "closed_trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "net_r": 0,
+      "avg_r": 0.0,
+      "max_drawdown_r": 0.0
+    },
+    {
+      "indicator": "Wammie/Moolah",
+      "setups": 0,
+      "entries": 0,
+      "canceled_setups": 0,
+      "closed_trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "net_r": 0,
+      "avg_r": 0.0,
+      "max_drawdown_r": 0.0
+    }
+  ]
+}

@@ -1,0 +1,744 @@
+//@version=6
+indicator("Last Kiss (Retouch) - Strategy Aligned", overlay=true, max_labels_count=500, max_boxes_count=200)
+
+// -----------------------------
+// Inputs
+// -----------------------------
+groupPreset = "0) Pair Presets"
+groupBox = "1) Box Detection"
+groupBreak = "2) Breakout Validation"
+groupRetest = "3) Retouch + Catalyst"
+groupExec = "4) Execution Levels"
+groupFilter = "5) Filters"
+groupVis = "6) Visuals"
+
+pairPresetMode = input.string("Off (Manual Inputs)", "Pair Preset Mode", options=["Off (Manual Inputs)", "Synced Per-Pair (MT5 2020-2026, 2026-02-26)"], group=groupPreset)
+
+minConsolBars = input.int(20, "Min Consolidation Bars", minval=8, maxval=200, group=groupBox)
+maxConsolBars = input.int(80, "Max Consolidation Bars", minval=12, maxval=400, group=groupBox)
+minTouches = input.int(2, "Min Touches (Top + Bottom)", minval=2, maxval=5, group=groupBox)
+touchTolPct = input.float(8.0, "Touch Tolerance (% of Box Height)", minval=0.5, maxval=30.0, step=0.5, group=groupBox)
+touchTolTicks = input.int(8, "Min Touch Tolerance (Ticks)", minval=1, maxval=100, group=groupBox)
+rangeVolBufAtr = input.float(0.10, "Range Volatility Buffer (ATR)", minval=0.0, maxval=2.0, step=0.01, group=groupBox)
+rangeVolBufTicks = input.int(5, "Range Volatility Buffer (Ticks)", minval=0, maxval=100, group=groupBox)
+recentTouchWindow = input.int(12, "Recent Touch Window (Bars)", minval=4, maxval=200, group=groupBox)
+minRecentBoundaryTouches = input.int(2, "Min Recent Boundary Touches (Each Side)", minval=1, maxval=5, group=groupBox)
+maxBoundaryStaleBars = input.int(30, "Invalidate Box if One Boundary Untouched (Bars)", minval=5, maxval=500, group=groupBox)
+maxConsolDriftPct = input.float(25.0, "Max Net Drift (% of Box Height)", minval=5.0, maxval=200.0, step=1.0, group=groupBox)
+maxOutsideCloses = input.int(1, "Max Outside Closes During Consolidation", minval=0, maxval=20, group=groupBox)
+maxOutsideCloseRun = input.int(2, "Invalidate if Consecutive Outside Closes >", minval=1, maxval=20, group=groupBox)
+atrLen = input.int(14, "ATR Length", minval=5, maxval=50, group=groupBox)
+minBoxAtr = input.float(1.2, "Min Box Height (ATR)", minval=0.2, maxval=10.0, step=0.1, group=groupBox)
+maxBoxAtr = input.float(6.0, "Max Box Height (ATR)", minval=0.5, maxval=20.0, step=0.1, group=groupBox)
+
+breakoutCloseOnly = input.bool(true, "Breakout Requires Candle Close Beyond Box", group=groupBreak)
+breakoutBufferAtr = input.float(0.10, "Breakout Buffer (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupBreak)
+minBreakoutBodyAtr = input.float(0.25, "Min Breakout Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupBreak)
+useVolumeFilter = input.bool(true, "Use Volume Expansion Filter", group=groupBreak)
+volLen = input.int(20, "Volume MA Length", minval=5, maxval=100, group=groupBreak)
+volMult = input.float(1.1, "Volume > MA x", minval=0.5, maxval=5.0, step=0.1, group=groupBreak)
+maxFakeBreakouts = input.int(2, "Max Fake Breakouts per Box", minval=1, maxval=5, group=groupBreak)
+
+maxRetestBars = input.int(15, "Max Bars Breakout -> Retouch", minval=2, maxval=100, group=groupRetest)
+retestTolPct = input.float(12.0, "Retouch Tolerance (% of Box Height)", minval=1.0, maxval=50.0, step=0.5, group=groupRetest)
+retestTolTicks = input.int(10, "Min Retouch Tolerance (Ticks)", minval=1, maxval=100, group=groupRetest)
+minCatalystBodyAtr = input.float(0.20, "Min Catalyst Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupRetest)
+closeNearExtremePct = input.float(25.0, "Catalyst Close Near Extreme (%)", minval=1.0, maxval=49.0, step=1.0, group=groupRetest)
+minWickBodyRatio = input.float(0.20, "Min Rejection Wick / Body", minval=0.0, maxval=5.0, step=0.05, group=groupRetest)
+
+entryOffsetTicks = input.int(2, "Stop Entry Offset (Ticks)", minval=0, maxval=50, group=groupExec)
+entryExpiryBars = input.int(5, "Cancel Setup if Not Triggered (Bars)", minval=1, maxval=20, group=groupExec)
+stopMode = input.string("Midpoint of Box", "Stop Mode", options=["Midpoint of Box", "Opposite Box Edge", "Opposite Edge + ATR"], group=groupExec)
+stopAtrMult = input.float(1.0, "ATR Multiplier for Stop (if selected)", minval=0.1, maxval=5.0, step=0.1, group=groupExec)
+targetMode = input.string("R Multiple", "Target Mode", options=["Nearest Zone", "R Multiple"], group=groupExec)
+targetRR = input.float(2.0, "R Multiple Target", minval=2.0, maxval=10.0, step=0.1, group=groupExec)
+minSetupRR = input.float(2.0, "Minimum Setup R", minval=2.0, maxval=10.0, step=0.1, group=groupExec)
+targetPivotLen = input.int(3, "Target Zone Pivot Length", minval=1, maxval=10, group=groupExec)
+targetZoneBufferTicks = input.int(2, "Target Zone Buffer (Ticks)", minval=0, maxval=50, group=groupExec)
+
+useTrendFilter = input.bool(true, "Use Daily 200 SMA + H4 50 EMA Trend Filter", group=groupFilter)
+dailySmaLen = input.int(200, "Daily SMA Length", minval=50, maxval=400, group=groupFilter)
+h4EmaLen = input.int(50, "H4 EMA Length", minval=20, maxval=200, group=groupFilter)
+useSessionFilter = input.bool(true, "Use Session Filter", group=groupFilter)
+tradeSession = input.session("0700-1700", "Session (Exchange Time)", group=groupFilter)
+
+showBox = input.bool(true, "Plot Box Levels", group=groupVis)
+showBoxArea = input.bool(true, "Draw Fixed Box Area (Rectangle)", group=groupVis)
+freezeBoxOnBreakout = input.bool(true, "Freeze Rectangle at Valid Breakout", group=groupVis)
+maxNoZoneTouchBars = input.int(120, "Expire Rectangle After Bars Without Zone Touch", minval=10, maxval=5000, group=groupVis)
+keepHistoricalRectangles = input.bool(true, "Keep Historical Rectangles", group=groupVis)
+deleteInvalidatedBoxes = input.bool(false, "Delete Invalidated Boxes", group=groupVis)
+showLevels = input.bool(true, "Plot Entry/SL/TP Levels", group=groupVis)
+showTargetZones = input.bool(false, "Plot Target Zones", group=groupVis)
+showEventMarkers = input.bool(true, "Plot Event Markers", group=groupVis)
+showSessionBg = input.bool(false, "Shade Active Session", group=groupVis)
+
+// -----------------------------
+// Pair presets (synced from MT5 optimization run, 2026-02-26)
+// -----------------------------
+pairSym = str.upper(syminfo.ticker)
+presetEnabled = pairPresetMode == "Synced Per-Pair (MT5 2020-2026, 2026-02-26)"
+presetEURUSD = presetEnabled and str.contains(pairSym, "EURUSD")
+presetGBPUSD = presetEnabled and str.contains(pairSym, "GBPUSD")
+presetUSDCAD = presetEnabled and str.contains(pairSym, "USDCAD")
+presetUSDJPY = presetEnabled and str.contains(pairSym, "USDJPY")
+
+int effMinConsolBars = minConsolBars
+int effMaxConsolBars = maxConsolBars
+int effMinTouches = minTouches
+float effTouchTolPct = touchTolPct
+float effRangeVolBufAtr = rangeVolBufAtr
+int effRangeVolBufTicks = rangeVolBufTicks
+int effRecentTouchWindow = recentTouchWindow
+int effMinRecentBoundaryTouches = minRecentBoundaryTouches
+int effMaxBoundaryStaleBars = maxBoundaryStaleBars
+float effMaxConsolDriftPct = maxConsolDriftPct
+int effMaxOutsideCloses = maxOutsideCloses
+int effMaxOutsideCloseRun = maxOutsideCloseRun
+float effMinBoxAtr = minBoxAtr
+float effMaxBoxAtr = maxBoxAtr
+float effBreakoutBufferAtr = breakoutBufferAtr
+float effMinBreakoutBodyAtr = minBreakoutBodyAtr
+bool effUseVolumeFilter = useVolumeFilter
+float effVolMult = volMult
+int effMaxRetestBars = maxRetestBars
+float effRetestTolPct = retestTolPct
+float effMinCatalystBodyAtr = minCatalystBodyAtr
+float effCloseNearExtremePct = closeNearExtremePct
+float effMinWickBodyRatio = minWickBodyRatio
+int effEntryExpiryBars = entryExpiryBars
+string effStopMode = stopMode
+string effTargetMode = targetMode
+float effTargetRR = targetRR
+float effMinSetupRR = minSetupRR
+bool effUseTrendFilter = useTrendFilter
+bool effUseSessionFilter = useSessionFilter
+int effMaxNoZoneTouchBars = maxNoZoneTouchBars
+
+if presetEURUSD
+    effMinConsolBars := 16
+    effMaxConsolBars := 60
+    effMinTouches := 2
+    effTouchTolPct := 8.0
+    effRangeVolBufAtr := 0.10
+    effRangeVolBufTicks := 5
+    effRecentTouchWindow := 16
+    effMinRecentBoundaryTouches := 2
+    effMaxBoundaryStaleBars := 20
+    effMaxConsolDriftPct := 25.0
+    effMaxOutsideCloses := 1
+    effMaxOutsideCloseRun := 1
+    effMinBoxAtr := 1.2
+    effMaxBoxAtr := 4.0
+    effBreakoutBufferAtr := 0.15
+    effMinBreakoutBodyAtr := 0.35
+    effUseVolumeFilter := true
+    effVolMult := 1.2
+    effMaxRetestBars := 12
+    effRetestTolPct := 10.0
+    effMinCatalystBodyAtr := 0.20
+    effCloseNearExtremePct := 25.0
+    effMinWickBodyRatio := 0.20
+    effEntryExpiryBars := 3
+    effStopMode := "Opposite Box Edge"
+    effTargetMode := "R Multiple"
+    effTargetRR := 2.0
+    effMinSetupRR := 2.0
+    effUseTrendFilter := true
+    effUseSessionFilter := false
+    effMaxNoZoneTouchBars := 120
+else if presetGBPUSD
+    effMinConsolBars := 16
+    effMaxConsolBars := 50
+    effMinTouches := 3
+    effTouchTolPct := 6.0
+    effRangeVolBufAtr := 0.05
+    effRangeVolBufTicks := 3
+    effRecentTouchWindow := 16
+    effMinRecentBoundaryTouches := 1
+    effMaxBoundaryStaleBars := 40
+    effMaxConsolDriftPct := 35.0
+    effMaxOutsideCloses := 2
+    effMaxOutsideCloseRun := 1
+    effMinBoxAtr := 1.4
+    effMaxBoxAtr := 4.0
+    effBreakoutBufferAtr := 0.05
+    effMinBreakoutBodyAtr := 0.15
+    effUseVolumeFilter := true
+    effVolMult := 1.0
+    effMaxRetestBars := 8
+    effRetestTolPct := 15.0
+    effMinCatalystBodyAtr := 0.12
+    effCloseNearExtremePct := 30.0
+    effMinWickBodyRatio := 0.30
+    effEntryExpiryBars := 5
+    effStopMode := "Midpoint of Box"
+    effTargetMode := "R Multiple"
+    effTargetRR := 2.5
+    effMinSetupRR := 2.5
+    effUseTrendFilter := true
+    effUseSessionFilter := true
+    effMaxNoZoneTouchBars := 240
+else if presetUSDCAD
+    effMinConsolBars := 16
+    effMaxConsolBars := 60
+    effMinTouches := 3
+    effTouchTolPct := 6.0
+    effRangeVolBufAtr := 0.15
+    effRangeVolBufTicks := 3
+    effRecentTouchWindow := 12
+    effMinRecentBoundaryTouches := 2
+    effMaxBoundaryStaleBars := 30
+    effMaxConsolDriftPct := 35.0
+    effMaxOutsideCloses := 0
+    effMaxOutsideCloseRun := 1
+    effMinBoxAtr := 1.0
+    effMaxBoxAtr := 4.0
+    effBreakoutBufferAtr := 0.15
+    effMinBreakoutBodyAtr := 0.25
+    effUseVolumeFilter := true
+    effVolMult := 1.2
+    effMaxRetestBars := 8
+    effRetestTolPct := 12.0
+    effMinCatalystBodyAtr := 0.30
+    effCloseNearExtremePct := 25.0
+    effMinWickBodyRatio := 0.30
+    effEntryExpiryBars := 5
+    effStopMode := "Midpoint of Box"
+    effTargetMode := "R Multiple"
+    effTargetRR := 3.0
+    effMinSetupRR := 2.5
+    effUseTrendFilter := true
+    effUseSessionFilter := false
+    effMaxNoZoneTouchBars := 120
+else if presetUSDJPY
+    effMinConsolBars := 30
+    effMaxConsolBars := 50
+    effMinTouches := 2
+    effTouchTolPct := 6.0
+    effRangeVolBufAtr := 0.05
+    effRangeVolBufTicks := 8
+    effRecentTouchWindow := 12
+    effMinRecentBoundaryTouches := 1
+    effMaxBoundaryStaleBars := 20
+    effMaxConsolDriftPct := 20.0
+    effMaxOutsideCloses := 2
+    effMaxOutsideCloseRun := 2
+    effMinBoxAtr := 1.0
+    effMaxBoxAtr := 6.0
+    effBreakoutBufferAtr := 0.10
+    effMinBreakoutBodyAtr := 0.25
+    effUseVolumeFilter := false
+    effVolMult := 1.2
+    effMaxRetestBars := 20
+    effRetestTolPct := 12.0
+    effMinCatalystBodyAtr := 0.30
+    effCloseNearExtremePct := 30.0
+    effMinWickBodyRatio := 0.10
+    effEntryExpiryBars := 3
+    effStopMode := "Midpoint of Box"
+    effTargetMode := "R Multiple"
+    effTargetRR := 3.0
+    effMinSetupRR := 2.0
+    effUseTrendFilter := false
+    effUseSessionFilter := true
+    effMaxNoZoneTouchBars := 60
+
+// -----------------------------
+// Helpers
+// -----------------------------
+atr = ta.atr(atrLen)
+volMA = ta.sma(volume, volLen)
+searchMinBars = math.min(effMinConsolBars, effMaxConsolBars)
+searchMaxBars = math.max(effMinConsolBars, effMaxConsolBars)
+enoughData = bar_index >= searchMaxBars
+targetZoneBuffer = syminfo.mintick * targetZoneBufferTicks
+
+boxTol(float boxHeight) =>
+    math.max(syminfo.mintick * touchTolTicks, boxHeight * effTouchTolPct * 0.01)
+
+rangeVolBuf() =>
+    math.max(syminfo.mintick * effRangeVolBufTicks, atr * effRangeVolBufAtr)
+
+retestTol(float boxHeight) =>
+    math.max(syminfo.mintick * retestTolTicks, boxHeight * effRetestTolPct * 0.01)
+
+countTopTouches(float level, float tol, int len) =>
+    int count = 0
+    for i = 0 to len - 1
+        count += high[i] >= level - tol ? 1 : 0
+    count
+
+countBottomTouches(float level, float tol, int len) =>
+    int count = 0
+    for i = 0 to len - 1
+        count += low[i] <= level + tol ? 1 : 0
+    count
+
+countOutsideCloses(float top, float bottom, float tol, int len) =>
+    int count = 0
+    for i = 0 to len - 1
+        count += close[i] > top + tol or close[i] < bottom - tol ? 1 : 0
+    count
+
+// -----------------------------
+// MTF trend filter (strategy-aligned)
+// -----------------------------
+dClose = request.security(syminfo.tickerid, "D", close, lookahead=barmerge.lookahead_off)
+dSma = request.security(syminfo.tickerid, "D", ta.sma(close, dailySmaLen), lookahead=barmerge.lookahead_off)
+h4Close = request.security(syminfo.tickerid, "240", close, lookahead=barmerge.lookahead_off)
+h4Ema = request.security(syminfo.tickerid, "240", ta.ema(close, h4EmaLen), lookahead=barmerge.lookahead_off)
+trendLong = dClose > dSma and h4Close > h4Ema
+trendShort = dClose < dSma and h4Close < h4Ema
+inSession = not na(time(timeframe.period, tradeSession))
+
+// -----------------------------
+// Target zones (pivot-based)
+// -----------------------------
+var float supportZone = na
+var float resistanceZone = na
+
+pLow = ta.pivotlow(low, targetPivotLen, targetPivotLen)
+pHigh = ta.pivothigh(high, targetPivotLen, targetPivotLen)
+if not na(pLow)
+    supportZone := pLow
+if not na(pHigh)
+    resistanceZone := pHigh
+
+// -----------------------------
+// State
+// 0 = searching box
+// 1 = box ready, waiting breakout
+// 2 = breakout happened, waiting retouch+catalyst
+// 3 = pending stop-entry after catalyst
+// -----------------------------
+var int state = 0
+var float boxTop = na
+var float boxBottom = na
+var int boxStartBar = na
+var int breakoutBar = na
+var int direction = 0  // 1 long, -1 short
+var int fakeBreakouts = 0
+var float entryPrice = na
+var float stopPrice = na
+var float targetPrice = na
+var int setupBar = na
+var int outsideCloseRun = 0
+var box activeBoxRect = na
+var line activeTopLine = na
+var line activeBottomLine = na
+var int lastZoneTouchBar = na
+var int lastTopTouchBar = na
+var int lastBottomTouchBar = na
+
+// Event flags for plotting/alerts
+bullBreakoutEvent = false
+bearBreakoutEvent = false
+bullRetestEvent = false
+bearRetestEvent = false
+bullSetupEvent = false
+bearSetupEvent = false
+bullEntryEvent = false
+bearEntryEvent = false
+setupCanceledEvent = false
+
+// -----------------------------
+// Candidate box from lookback window
+// -----------------------------
+int candLen = na
+float candTop = na
+float candBottom = na
+if enoughData
+    for len = searchMinBars to searchMaxBars
+        t = ta.highest(high, len)
+        b = ta.lowest(low, len)
+        h = t - b
+        tol = boxTol(h) + rangeVolBuf()
+        recentLen = math.min(effRecentTouchWindow, len)
+
+        topTouches = countTopTouches(t, tol, len)
+        bottomTouches = countBottomTouches(b, tol, len)
+        topTouchesRecent = countTopTouches(t, tol, recentLen)
+        bottomTouchesRecent = countBottomTouches(b, tol, recentLen)
+        outsideCloses = countOutsideCloses(t, b, tol, len)
+        drift = math.abs(close - close[len - 1])
+
+        heightOk = h >= atr * effMinBoxAtr and h <= atr * effMaxBoxAtr
+        touchesOk = topTouches >= effMinTouches and bottomTouches >= effMinTouches
+        recentBoundaryActive = topTouchesRecent >= effMinRecentBoundaryTouches and bottomTouchesRecent >= effMinRecentBoundaryTouches
+        driftOk = h > 0 and drift <= h * effMaxConsolDriftPct * 0.01
+        outsideOk = outsideCloses <= effMaxOutsideCloses
+        valid = heightOk and touchesOk and recentBoundaryActive and driftOk and outsideOk
+
+        if valid and (na(candLen) or len > candLen)
+            candLen := len
+            candTop := t
+            candBottom := b
+
+candidateValid = not na(candLen)
+
+// -----------------------------
+// State machine
+// -----------------------------
+if barstate.isconfirmed
+    // 0) Search for a valid box
+    if state == 0 and candidateValid
+        if not keepHistoricalRectangles and not na(activeBoxRect)
+            box.delete(activeBoxRect)
+        if not keepHistoricalRectangles and not na(activeTopLine)
+            line.delete(activeTopLine)
+        if not keepHistoricalRectangles and not na(activeBottomLine)
+            line.delete(activeBottomLine)
+        boxTop := candTop
+        boxBottom := candBottom
+        boxStartBar := bar_index - candLen + 1
+        breakoutBar := na
+        direction := 0
+        fakeBreakouts := 0
+        entryPrice := na
+        stopPrice := na
+        targetPrice := na
+        setupBar := na
+        outsideCloseRun := 0
+        lastZoneTouchBar := bar_index
+        lastTopTouchBar := bar_index
+        lastBottomTouchBar := bar_index
+        state := 1
+        if showBoxArea
+            activeBoxRect := box.new(boxStartBar, boxTop, bar_index, boxBottom, xloc=xloc.bar_index, bgcolor=color.new(color.orange, 88), border_color=color.new(color.orange, 0), border_width=1)
+        else
+            activeBoxRect := na
+        if showBox
+            activeTopLine := line.new(boxStartBar, boxTop, bar_index, boxTop, xloc=xloc.bar_index, color=color.new(color.orange, 0), width=2)
+            activeBottomLine := line.new(boxStartBar, boxBottom, bar_index, boxBottom, xloc=xloc.bar_index, color=color.new(color.orange, 0), width=2)
+        else
+            activeTopLine := na
+            activeBottomLine := na
+
+    // 1) Maintain box + wait breakout
+    if state == 1
+        // Box is intentionally fixed after detection.
+        if showBoxArea and not na(activeBoxRect)
+            box.set_right(activeBoxRect, bar_index)
+        if showBox
+            if na(activeTopLine)
+                activeTopLine := line.new(boxStartBar, boxTop, bar_index, boxTop, xloc=xloc.bar_index, color=color.new(color.orange, 0), width=2)
+            if na(activeBottomLine)
+                activeBottomLine := line.new(boxStartBar, boxBottom, bar_index, boxBottom, xloc=xloc.bar_index, color=color.new(color.orange, 0), width=2)
+            line.set_x2(activeTopLine, bar_index)
+            line.set_x2(activeBottomLine, bar_index)
+        else
+            if not na(activeTopLine)
+                line.delete(activeTopLine)
+                activeTopLine := na
+            if not na(activeBottomLine)
+                line.delete(activeBottomLine)
+                activeBottomLine := na
+
+        activeHeight = boxTop - boxBottom
+        activeTouchTol = boxTol(activeHeight) + rangeVolBuf()
+        inBoxNow = high >= boxBottom - activeTouchTol and low <= boxTop + activeTouchTol
+        topTouchedNow = high >= boxTop - activeTouchTol
+        bottomTouchedNow = low <= boxBottom + activeTouchTol
+        closeOutsideNow = close > boxTop + activeTouchTol or close < boxBottom - activeTouchTol
+
+        if inBoxNow
+            lastZoneTouchBar := bar_index
+        if topTouchedNow
+            lastTopTouchBar := bar_index
+        if bottomTouchedNow
+            lastBottomTouchBar := bar_index
+        outsideCloseRun := closeOutsideNow ? outsideCloseRun + 1 : 0
+
+        inactiveTooLong = not na(lastZoneTouchBar) and (bar_index - lastZoneTouchBar > effMaxNoZoneTouchBars)
+        topStale = not na(lastTopTouchBar) and (bar_index - lastTopTouchBar > effMaxBoundaryStaleBars)
+        bottomStale = not na(lastBottomTouchBar) and (bar_index - lastBottomTouchBar > effMaxBoundaryStaleBars)
+        staleBoundary = topStale or bottomStale
+        outsideRunInvalid = outsideCloseRun > effMaxOutsideCloseRun
+
+        if inactiveTooLong or staleBoundary or outsideRunInvalid
+            setupCanceledEvent := true
+            state := 0
+            boxTop := na
+            boxBottom := na
+            boxStartBar := na
+            breakoutBar := na
+            direction := 0
+            fakeBreakouts := 0
+            entryPrice := na
+            stopPrice := na
+            targetPrice := na
+            setupBar := na
+            outsideCloseRun := 0
+            lastZoneTouchBar := na
+            lastTopTouchBar := na
+            lastBottomTouchBar := na
+            if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeBoxRect)
+                box.delete(activeBoxRect)
+            if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeTopLine)
+                line.delete(activeTopLine)
+            if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeBottomLine)
+                line.delete(activeBottomLine)
+            activeBoxRect := na
+            activeTopLine := na
+            activeBottomLine := na
+
+        if not inactiveTooLong and not staleBoundary and not outsideRunInvalid
+            breakBuf = atr * effBreakoutBufferAtr
+            breakoutBodyOk = math.abs(close - open) >= atr * effMinBreakoutBodyAtr
+            breakoutVolumeOk = not effUseVolumeFilter or (volume > volMA * effVolMult)
+
+            longBreakRaw = breakoutCloseOnly ? close > boxTop + breakBuf : high > boxTop + breakBuf
+            shortBreakRaw = breakoutCloseOnly ? close < boxBottom - breakBuf : low < boxBottom - breakBuf
+
+            longBreak = longBreakRaw and close[1] <= boxTop and breakoutBodyOk and breakoutVolumeOk
+            shortBreak = shortBreakRaw and close[1] >= boxBottom and breakoutBodyOk and breakoutVolumeOk
+
+            if longBreak
+                direction := 1
+                breakoutBar := bar_index
+                state := 2
+                bullBreakoutEvent := true
+                lastTopTouchBar := bar_index
+                outsideCloseRun := 0
+                if freezeBoxOnBreakout and showBoxArea and not na(activeBoxRect)
+                    box.set_right(activeBoxRect, bar_index)
+                if freezeBoxOnBreakout and showBox and not na(activeTopLine)
+                    line.set_x2(activeTopLine, bar_index)
+                if freezeBoxOnBreakout and showBox and not na(activeBottomLine)
+                    line.set_x2(activeBottomLine, bar_index)
+            else if shortBreak
+                direction := -1
+                breakoutBar := bar_index
+                state := 2
+                bearBreakoutEvent := true
+                lastBottomTouchBar := bar_index
+                outsideCloseRun := 0
+                if freezeBoxOnBreakout and showBoxArea and not na(activeBoxRect)
+                    box.set_right(activeBoxRect, bar_index)
+                if freezeBoxOnBreakout and showBox and not na(activeTopLine)
+                    line.set_x2(activeTopLine, bar_index)
+                if freezeBoxOnBreakout and showBox and not na(activeBottomLine)
+                    line.set_x2(activeBottomLine, bar_index)
+
+    // 2) Wait retouch + catalyst
+    if state == 2
+        if showBoxArea and not na(activeBoxRect) and not freezeBoxOnBreakout
+            box.set_right(activeBoxRect, bar_index)
+        if showBox and not freezeBoxOnBreakout
+            if not na(activeTopLine)
+                line.set_x2(activeTopLine, bar_index)
+            if not na(activeBottomLine)
+                line.set_x2(activeBottomLine, bar_index)
+        else if not showBox
+            if not na(activeTopLine)
+                line.delete(activeTopLine)
+                activeTopLine := na
+            if not na(activeBottomLine)
+                line.delete(activeBottomLine)
+                activeBottomLine := na
+
+        barsFromBreak = bar_index - breakoutBar
+        bHeight = boxTop - boxBottom
+        rTol = retestTol(bHeight)
+        edge = direction == 1 ? boxTop : boxBottom
+        touchedEdge = high >= edge - rTol and low <= edge + rTol
+
+        if touchedEdge
+            bullRetestEvent := direction == 1
+            bearRetestEvent := direction == -1
+
+        rng = math.max(high - low, syminfo.mintick)
+        body = math.abs(close - open)
+        bodyOk = body >= atr * effMinCatalystBodyAtr
+        closeNearHigh = (high - close) <= rng * effCloseNearExtremePct * 0.01
+        closeNearLow = (close - low) <= rng * effCloseNearExtremePct * 0.01
+        lowerWick = math.min(open, close) - low
+        upperWick = high - math.max(open, close)
+        bullWickOk = lowerWick >= body * effMinWickBodyRatio
+        bearWickOk = upperWick >= body * effMinWickBodyRatio
+
+        bullCatalyst = direction == 1 and touchedEdge and close > open and bodyOk and closeNearHigh and bullWickOk
+        bearCatalyst = direction == -1 and touchedEdge and close < open and bodyOk and closeNearLow and bearWickOk
+
+        trendOk = not effUseTrendFilter or (direction == 1 ? trendLong : trendShort)
+        sessionOk = not effUseSessionFilter or inSession
+
+        if (bullCatalyst or bearCatalyst) and trendOk and sessionOk
+            entryPrice := direction == 1 ? high + syminfo.mintick * entryOffsetTicks : low - syminfo.mintick * entryOffsetTicks
+            boxMid = (boxTop + boxBottom) * 0.5
+            stopPrice := effStopMode == "Midpoint of Box" ? boxMid : effStopMode == "Opposite Box Edge" ? (direction == 1 ? boxBottom : boxTop) : (direction == 1 ? boxBottom - atr * stopAtrMult : boxTop + atr * stopAtrMult)
+            risk = math.max(math.abs(entryPrice - stopPrice), syminfo.mintick)
+            rrTarget = entryPrice + direction * risk * effTargetRR
+            zoneTargetLong = not na(resistanceZone) and resistanceZone > entryPrice ? resistanceZone - targetZoneBuffer : na
+            zoneTargetShort = not na(supportZone) and supportZone < entryPrice ? supportZone + targetZoneBuffer : na
+            zoneTarget = direction == 1 ? zoneTargetLong : zoneTargetShort
+            targetPrice := effTargetMode == "Nearest Zone" and not na(zoneTarget) ? zoneTarget : rrTarget
+            setupRR = direction == 1 ? (targetPrice - entryPrice) / risk : (entryPrice - targetPrice) / risk
+
+            if setupRR >= effMinSetupRR
+                setupBar := bar_index
+                state := 3
+                bullSetupEvent := direction == 1
+                bearSetupEvent := direction == -1
+            else
+                entryPrice := na
+                stopPrice := na
+                targetPrice := na
+        else
+            failedBreak = direction == 1 ? close < boxTop : close > boxBottom
+            timedOut = barsFromBreak > effMaxRetestBars
+            if failedBreak or timedOut
+                fakeBreakouts += 1
+                setupCanceledEvent := true
+                prevDirection = direction
+                direction := 0
+                breakoutBar := na
+                entryPrice := na
+                stopPrice := na
+                targetPrice := na
+                setupBar := na
+                if fakeBreakouts >= maxFakeBreakouts
+                    // Too many fake breaks from same box: drop box.
+                    state := 0
+                    boxTop := na
+                    boxBottom := na
+                    boxStartBar := na
+                    fakeBreakouts := 0
+                    outsideCloseRun := 0
+                    lastZoneTouchBar := na
+                    lastTopTouchBar := na
+                    lastBottomTouchBar := na
+                    if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeBoxRect)
+                        box.delete(activeBoxRect)
+                    if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeTopLine)
+                        line.delete(activeTopLine)
+                    if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeBottomLine)
+                        line.delete(activeBottomLine)
+                    activeBoxRect := na
+                    activeTopLine := na
+                    activeBottomLine := na
+                else
+                    // Keep box, allow a new breakout attempt.
+                    state := 1
+                    lastZoneTouchBar := bar_index
+                    if prevDirection == 1
+                        lastTopTouchBar := bar_index
+                    else if prevDirection == -1
+                        lastBottomTouchBar := bar_index
+                    outsideCloseRun := 0
+                    if showBoxArea and not na(activeBoxRect)
+                        box.set_right(activeBoxRect, bar_index)
+
+    // 3) Pending stop-entry (cancel if not triggered in 3-5 bars, per playbook)
+    if state == 3
+        if showBoxArea and not na(activeBoxRect) and not freezeBoxOnBreakout
+            box.set_right(activeBoxRect, bar_index)
+        if showBox and not freezeBoxOnBreakout
+            if not na(activeTopLine)
+                line.set_x2(activeTopLine, bar_index)
+            if not na(activeBottomLine)
+                line.set_x2(activeBottomLine, bar_index)
+        else if not showBox
+            if not na(activeTopLine)
+                line.delete(activeTopLine)
+                activeTopLine := na
+            if not na(activeBottomLine)
+                line.delete(activeBottomLine)
+                activeBottomLine := na
+
+        barsSinceSetup = bar_index - setupBar
+        entryTriggered = direction == 1 ? high >= entryPrice : low <= entryPrice
+        invalidBeforeTrigger = direction == 1 ? low <= stopPrice : high >= stopPrice
+        expired = barsSinceSetup > effEntryExpiryBars
+
+        if entryTriggered
+            bullEntryEvent := direction == 1
+            bearEntryEvent := direction == -1
+            // Reset after trigger so a new setup can be found.
+            state := 0
+            boxTop := na
+            boxBottom := na
+            boxStartBar := na
+            breakoutBar := na
+            direction := 0
+            fakeBreakouts := 0
+            entryPrice := na
+            stopPrice := na
+            targetPrice := na
+            setupBar := na
+            outsideCloseRun := 0
+            lastZoneTouchBar := na
+            lastTopTouchBar := na
+            lastBottomTouchBar := na
+            if not keepHistoricalRectangles and not na(activeBoxRect)
+                box.delete(activeBoxRect)
+            if not keepHistoricalRectangles and not na(activeTopLine)
+                line.delete(activeTopLine)
+            if not keepHistoricalRectangles and not na(activeBottomLine)
+                line.delete(activeBottomLine)
+            activeBoxRect := na
+            activeTopLine := na
+            activeBottomLine := na
+        else if invalidBeforeTrigger or expired
+            setupCanceledEvent := true
+            state := 0
+            boxTop := na
+            boxBottom := na
+            boxStartBar := na
+            breakoutBar := na
+            direction := 0
+            fakeBreakouts := 0
+            entryPrice := na
+            stopPrice := na
+            targetPrice := na
+            setupBar := na
+            outsideCloseRun := 0
+            lastZoneTouchBar := na
+            lastTopTouchBar := na
+            lastBottomTouchBar := na
+            if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeBoxRect)
+                box.delete(activeBoxRect)
+            if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeTopLine)
+                line.delete(activeTopLine)
+            if (deleteInvalidatedBoxes or not keepHistoricalRectangles) and not na(activeBottomLine)
+                line.delete(activeBottomLine)
+            activeBoxRect := na
+            activeTopLine := na
+            activeBottomLine := na
+
+// -----------------------------
+// Plots
+// -----------------------------
+activePending = state == 3
+
+plot(showTargetZones ? supportZone : na, "Support Zone (Target)", color=color.new(color.green, 35), linewidth=2, style=plot.style_linebr)
+plot(showTargetZones ? resistanceZone : na, "Resistance Zone (Target)", color=color.new(color.red, 35), linewidth=2, style=plot.style_linebr)
+plot(showLevels and activePending ? entryPrice : na, "Pending Entry", color=color.new(color.blue, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels and activePending ? stopPrice : na, "Emergency Stop", color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels and activePending ? targetPrice : na, "Target", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+
+bgcolor(showSessionBg and inSession ? color.new(color.teal, 90) : na, title="Session Background")
+
+plotshape(showEventMarkers and bullBreakoutEvent, title="Bull Breakout", style=shape.triangleup, location=location.abovebar, color=color.new(color.lime, 0), size=size.tiny, text="BO")
+plotshape(showEventMarkers and bearBreakoutEvent, title="Bear Breakout", style=shape.triangledown, location=location.belowbar, color=color.new(color.red, 0), size=size.tiny, text="BO")
+plotshape(showEventMarkers and bullRetestEvent, title="Bull Retest", style=shape.circle, location=location.belowbar, color=color.new(color.aqua, 0), size=size.tiny, text="RT")
+plotshape(showEventMarkers and bearRetestEvent, title="Bear Retest", style=shape.circle, location=location.abovebar, color=color.new(color.fuchsia, 0), size=size.tiny, text="RT")
+plotshape(showEventMarkers and bullSetupEvent, title="Bull Setup Ready", style=shape.labelup, location=location.belowbar, color=color.new(color.blue, 0), textcolor=color.white, size=size.tiny, text="BUY STOP")
+plotshape(showEventMarkers and bearSetupEvent, title="Bear Setup Ready", style=shape.labeldown, location=location.abovebar, color=color.new(color.blue, 0), textcolor=color.white, size=size.tiny, text="SELL STOP")
+plotshape(showEventMarkers and bullEntryEvent, title="Bull Entry Triggered", style=shape.arrowup, location=location.belowbar, color=color.new(color.green, 0), size=size.tiny, text="ENTRY")
+plotshape(showEventMarkers and bearEntryEvent, title="Bear Entry Triggered", style=shape.arrowdown, location=location.abovebar, color=color.new(color.red, 0), size=size.tiny, text="ENTRY")
+plotshape(showEventMarkers and setupCanceledEvent, title="Setup Canceled", style=shape.xcross, location=location.top, color=color.new(color.gray, 0), size=size.tiny, text="CXL")
+
+// -----------------------------
+// Alerts
+// -----------------------------
+alertcondition(bullBreakoutEvent, "Last Kiss Bull Breakout", "Bull breakout detected from a valid consolidation box.")
+alertcondition(bearBreakoutEvent, "Last Kiss Bear Breakout", "Bear breakout detected from a valid consolidation box.")
+alertcondition(bullRetestEvent, "Last Kiss Bull Retest", "Price retested broken resistance (bull setup path).")
+alertcondition(bearRetestEvent, "Last Kiss Bear Retest", "Price retested broken support (bear setup path).")
+alertcondition(bullSetupEvent, "Last Kiss Bull Setup Ready", "Bull catalyst confirmed. Place Buy Stop above catalyst high.")
+alertcondition(bearSetupEvent, "Last Kiss Bear Setup Ready", "Bear catalyst confirmed. Place Sell Stop below catalyst low.")
+alertcondition(bullEntryEvent, "Last Kiss Bull Entry Triggered", "Bull stop-entry level was triggered.")
+alertcondition(bearEntryEvent, "Last Kiss Bear Entry Triggered", "Bear stop-entry level was triggered.")
+alertcondition(setupCanceledEvent, "Last Kiss Setup Canceled", "Setup invalidated or expired before trigger.")

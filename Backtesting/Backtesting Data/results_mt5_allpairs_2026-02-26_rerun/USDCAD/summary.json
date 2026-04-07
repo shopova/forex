@@ -1,0 +1,55 @@
+{
+  "source_csv": "Backtesting Data/USDCAD_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 1e-05,
+  "disable_trend_filter": false,
+  "disable_session_filter": false,
+  "big_shadow_profile": "Balanced",
+  "big_shadow_pair_preset_mode": "MT5 Per-Pair >=2R (2020-2026)",
+  "results": [
+    {
+      "indicator": "Last Kiss",
+      "setups": 51,
+      "entries": 44,
+      "canceled_setups": 543,
+      "closed_trades": 37,
+      "wins": 14,
+      "losses": 23,
+      "breakeven": 0,
+      "win_rate_pct": 37.84,
+      "net_r": 5.0,
+      "avg_r": 0.135,
+      "max_drawdown_r": 8.0
+    },
+    {
+      "indicator": "Big Shadow",
+      "setups": 380,
+      "entries": 328,
+      "canceled_setups": 52,
+      "closed_trades": 328,
+      "wins": 92,
+      "losses": 177,
+      "breakeven": 59,
+      "win_rate_pct": 28.05,
+      "net_r": 7.0,
+      "avg_r": 0.021,
+      "max_drawdown_r": 17.0
+    },
+    {
+      "indicator": "Wammie/Moolah",
+      "setups": 16,
+      "entries": 15,
+      "canceled_setups": 1,
+      "closed_trades": 15,
+      "wins": 5,
+      "losses": 6,
+      "breakeven": 4,
+      "win_rate_pct": 33.33,
+      "net_r": 4.0,
+      "avg_r": 0.267,
+      "max_drawdown_r": 3.0
+    }
+  ]
+}

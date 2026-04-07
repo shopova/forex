@@ -1,0 +1,37 @@
+//@version=6
+indicator("MACD Platinum")
+
+source = close
+fastLength = 12
+slowLength = 26
+signalLength = 9
+
+// Fast line
+ma1 = ta.ema(source, fastLength)
+ma2 = ta.ema(ma1, fastLength)
+zerolagEMA = (2.0 * ma1) - ma2
+
+// Slow line
+mas1 = ta.ema(source, slowLength)
+mas2 = ta.ema(mas1, slowLength)
+zerolagslowMA = (2.0 * mas1) - mas2
+
+// MACD line
+blueMACD = zerolagEMA - zerolagslowMA
+
+// Signal line
+emasig1 = ta.ema(blueMACD, signalLength)
+emasig2 = ta.ema(emasig1, signalLength)
+orgMACD = (2.0 * emasig1) - emasig2
+
+hist = blueMACD - orgMACD
+circleYPosition = orgMACD
+dotColor = hist > 0 ? color.aqua : color.red
+dotTrigger = ta.cross(blueMACD, orgMACD) and barstate.isconfirmed
+
+plot(blueMACD, color=color.aqua, linewidth=1, title="MACD line")
+plot(orgMACD, color=color.orange, linewidth=1, title="Signal")
+
+hline(0.0, "Zero", color=#777777)
+
+plot(dotTrigger ? circleYPosition : na, style=plot.style_circles, linewidth=4, color=dotColor, title="Dots")

@@ -1,0 +1,1406 @@
+//@version=6
+strategy("Three Setups Strategy (Last Kiss + Big Shadow + Wammie/Moolah)", overlay=true, max_labels_count=500, max_lines_count=500, max_boxes_count=300, pyramiding=0, process_orders_on_close=true, initial_capital=500, currency=currency.EUR)
+// Combined execution model:
+// - Single active position at a time (pyramiding = 0)
+// - Stop-entry trigger logic is evaluated from bar OHLC, then strategy enters
+// - Position size is risk-based from planned entry/stop distance
+
+// ============================================================================
+// 0) Strategy Engine + Risk
+// ============================================================================
+groupEngine = "0) Engine"
+groupRisk = "1) Risk"
+
+enableLastKiss = input.bool(true, "Enable Last Kiss", group=groupEngine)
+enableBigShadow = input.bool(true, "Enable Big Shadow", group=groupEngine)
+enableWammieMoolah = input.bool(true, "Enable Wammie/Moolah", group=groupEngine)
+
+priorityMode = input.string("Last Kiss > Big Shadow > Wammie/Moolah", "Trigger Priority (same-bar conflicts)", options=["Last Kiss > Big Shadow > Wammie/Moolah", "Big Shadow > Last Kiss > Wammie/Moolah", "Wammie/Moolah > Last Kiss > Big Shadow"], group=groupEngine)
+
+riskPct = input.float(0.50, "Risk Per Trade (% of Equity)", minval=0.05, maxval=5.0, step=0.05, group=groupRisk)
+enableGlobalBreakeven = input.bool(true, "Enable Move SL to BE", group=groupRisk)
+globalBreakevenR = input.float(1.0, "BE Trigger (+R) for Last Kiss", minval=0.5, maxval=5.0, step=0.1, group=groupRisk)
+showLevels = input.bool(true, "Plot Active Trade Levels", group=groupEngine)
+showMarkers = input.bool(true, "Plot Strategy Markers", group=groupEngine)
+showSessionBg = input.bool(false, "Shade Session (if any active module uses session)", group=groupEngine)
+
+// Shared trend MA lengths used by all modules.
+groupShared = "2) Shared MTF Filters"
+sharedDailySmaLen = input.int(200, "Daily SMA Length", minval=50, maxval=400, group=groupShared)
+sharedH4EmaLen = input.int(50, "H4 EMA Length", minval=20, maxval=200, group=groupShared)
+sharedSession = input.session("0700-1700", "Default Session (Exchange Time)", group=groupShared)
+
+// ============================================================================
+// Helpers
+// ============================================================================
+tolFromAtr(float atrValue, float atrMult, int ticks) =>
+    math.max(syminfo.mintick * ticks, atrValue * atrMult)
+
+calcQtyFromRisk(float entryPx, float stopPx, float riskPercent) =>
+    riskPerUnit = math.abs(entryPx - stopPx)
+    riskCash = strategy.equity * (riskPercent * 0.01)
+    riskPerUnit > 0 ? (riskCash / riskPerUnit) : 0.0
+
+countTopTouches(float lvl, float tol, int len) =>
+    int c = 0
+    for i = 0 to len - 1
+        c += high[i] >= lvl - tol ? 1 : 0
+    c
+
+countBottomTouches(float lvl, float tol, int len) =>
+    int c = 0
+    for i = 0 to len - 1
+        c += low[i] <= lvl + tol ? 1 : 0
+    c
+
+countOutsideCloses(float top, float bottom, float tol, int len) =>
+    int c = 0
+    for i = 0 to len - 1
+        c += close[i] > top + tol or close[i] < bottom - tol ? 1 : 0
+    c
+
+const int WM_MAX_SCAN_BARS = 200
+
+wmCountInterimTouches(int barsBetween, float zone, float tol, bool supportSide) =>
+    int cnt = 0
+    for i = 1 to WM_MAX_SCAN_BARS
+        if i < barsBetween
+            bool touched = supportSide ? (not na(low[i]) and low[i] <= zone + tol and low[i] >= zone - tol) : (not na(high[i]) and high[i] >= zone - tol and high[i] <= zone + tol)
+            cnt += touched ? 1 : 0
+    cnt
+
+wmMaxHighBetween(int barsBetween) =>
+    float mx = na
+    for i = 1 to WM_MAX_SCAN_BARS
+        if i < barsBetween and not na(high[i])
+            mx := na(mx) ? high[i] : math.max(mx, high[i])
+    mx
+
+wmMinLowBetween(int barsBetween) =>
+    float mn = na
+    for i = 1 to WM_MAX_SCAN_BARS
+        if i < barsBetween and not na(low[i])
+            mn := na(mn) ? low[i] : math.min(mn, low[i])
+    mn
+
+wmTouchesSupport(float zone, float tol) =>
+    not na(zone) and low <= zone + tol and low >= zone - tol
+
+wmTouchesResistance(float zone, float tol) =>
+    not na(zone) and high >= zone - tol and high <= zone + tol
+
+// Shared MTF data
+sharedDClose = request.security(syminfo.tickerid, "D", close, lookahead=barmerge.lookahead_off)
+sharedDSma = request.security(syminfo.tickerid, "D", ta.sma(close, sharedDailySmaLen), lookahead=barmerge.lookahead_off)
+sharedH4Close = request.security(syminfo.tickerid, "240", close, lookahead=barmerge.lookahead_off)
+sharedH4Ema = request.security(syminfo.tickerid, "240", ta.ema(close, sharedH4EmaLen), lookahead=barmerge.lookahead_off)
+sharedTrendLong = sharedDClose > sharedDSma and sharedH4Close > sharedH4Ema
+sharedTrendShort = sharedDClose < sharedDSma and sharedH4Close < sharedH4Ema
+sharedInSession = not na(time(timeframe.period, sharedSession))
+
+// ============================================================================
+// 3) Last Kiss Module (state machine adapted from indicator)
+// ============================================================================
+groupLKPreset = "3.0) Last Kiss - Pair Presets"
+groupLKBox = "3.1) Last Kiss - Box Detection"
+groupLKBreak = "3.2) Last Kiss - Breakout Validation"
+groupLKRetest = "3.3) Last Kiss - Retouch + Catalyst"
+groupLKExec = "3.4) Last Kiss - Execution"
+groupLKFilter = "3.5) Last Kiss - Filters"
+
+lkPairPresetMode = input.string("Off (Manual Inputs)", "LK Pair Preset Mode", options=["Off (Manual Inputs)", "Synced Per-Pair (MT5 2020-2026, 2026-02-26)"], group=groupLKPreset)
+
+lkMinConsolBars = input.int(20, "LK Min Consolidation Bars", minval=8, maxval=200, group=groupLKBox)
+lkMaxConsolBars = input.int(80, "LK Max Consolidation Bars", minval=12, maxval=400, group=groupLKBox)
+lkMinTouches = input.int(2, "LK Min Touches (Top + Bottom)", minval=2, maxval=5, group=groupLKBox)
+lkTouchTolPct = input.float(8.0, "LK Touch Tolerance (% box)", minval=0.5, maxval=30.0, step=0.5, group=groupLKBox)
+lkTouchTolTicks = input.int(8, "LK Min Touch Tolerance (Ticks)", minval=1, maxval=100, group=groupLKBox)
+lkRangeVolBufAtr = input.float(0.10, "LK Range Vol Buffer (ATR)", minval=0.0, maxval=2.0, step=0.01, group=groupLKBox)
+lkRangeVolBufTicks = input.int(5, "LK Range Vol Buffer (Ticks)", minval=0, maxval=100, group=groupLKBox)
+lkRecentTouchWindow = input.int(12, "LK Recent Touch Window", minval=4, maxval=200, group=groupLKBox)
+lkMinRecentBoundaryTouches = input.int(2, "LK Min Recent Boundary Touches", minval=1, maxval=5, group=groupLKBox)
+lkMaxBoundaryStaleBars = input.int(30, "LK Invalidate if Boundary Untouched (Bars)", minval=5, maxval=500, group=groupLKBox)
+lkMaxConsolDriftPct = input.float(25.0, "LK Max Drift (% box)", minval=5.0, maxval=200.0, step=1.0, group=groupLKBox)
+lkMaxOutsideCloses = input.int(1, "LK Max Outside Closes", minval=0, maxval=20, group=groupLKBox)
+lkMaxOutsideCloseRun = input.int(2, "LK Invalidate if Consecutive Outside Closes >", minval=1, maxval=20, group=groupLKBox)
+lkAtrLen = input.int(14, "LK ATR Length", minval=5, maxval=50, group=groupLKBox)
+lkMinBoxAtr = input.float(1.2, "LK Min Box Height (ATR)", minval=0.2, maxval=10.0, step=0.1, group=groupLKBox)
+lkMaxBoxAtr = input.float(6.0, "LK Max Box Height (ATR)", minval=0.5, maxval=20.0, step=0.1, group=groupLKBox)
+
+lkBreakoutCloseOnly = input.bool(true, "LK Breakout Requires Candle Close", group=groupLKBreak)
+lkBreakoutBufferAtr = input.float(0.10, "LK Breakout Buffer (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupLKBreak)
+lkMinBreakoutBodyAtr = input.float(0.25, "LK Min Breakout Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupLKBreak)
+lkUseVolumeFilter = input.bool(true, "LK Use Volume Expansion Filter", group=groupLKBreak)
+lkVolLen = input.int(20, "LK Volume MA Length", minval=5, maxval=100, group=groupLKBreak)
+lkVolMult = input.float(1.1, "LK Volume > MA x", minval=0.5, maxval=5.0, step=0.1, group=groupLKBreak)
+lkMaxFakeBreakouts = input.int(2, "LK Max Fake Breakouts per Box", minval=1, maxval=5, group=groupLKBreak)
+
+lkMaxRetestBars = input.int(15, "LK Max Bars Breakout -> Retouch", minval=2, maxval=100, group=groupLKRetest)
+lkRetestTolPct = input.float(12.0, "LK Retouch Tolerance (% box)", minval=1.0, maxval=50.0, step=0.5, group=groupLKRetest)
+lkRetestTolTicks = input.int(10, "LK Min Retouch Tolerance (Ticks)", minval=1, maxval=100, group=groupLKRetest)
+lkMinCatalystBodyAtr = input.float(0.20, "LK Min Catalyst Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupLKRetest)
+lkCloseNearExtremePct = input.float(25.0, "LK Catalyst Close Near Extreme (%)", minval=1.0, maxval=49.0, step=1.0, group=groupLKRetest)
+lkMinWickBodyRatio = input.float(0.20, "LK Min Rejection Wick/Body", minval=0.0, maxval=5.0, step=0.05, group=groupLKRetest)
+
+lkEntryOffsetTicks = input.int(2, "LK Stop Entry Offset (Ticks)", minval=0, maxval=50, group=groupLKExec)
+lkEntryExpiryBars = input.int(5, "LK Cancel Setup if Not Triggered (Bars)", minval=1, maxval=20, group=groupLKExec)
+lkStopMode = input.string("Midpoint of Box", "LK Stop Mode", options=["Midpoint of Box", "Opposite Box Edge", "Opposite Edge + ATR"], group=groupLKExec)
+lkStopAtrMult = input.float(1.0, "LK ATR Multiplier for Stop", minval=0.1, maxval=5.0, step=0.1, group=groupLKExec)
+lkTargetMode = input.string("R Multiple", "LK Target Mode", options=["Nearest Zone", "R Multiple"], group=groupLKExec)
+lkTargetRR = input.float(2.0, "LK R Multiple Target", minval=2.0, maxval=10.0, step=0.1, group=groupLKExec)
+lkMinSetupRR = input.float(2.0, "LK Minimum Setup R", minval=2.0, maxval=10.0, step=0.1, group=groupLKExec)
+lkTargetPivotLen = input.int(3, "LK Target Zone Pivot Length", minval=1, maxval=10, group=groupLKExec)
+lkTargetZoneBufferTicks = input.int(2, "LK Target Zone Buffer (Ticks)", minval=0, maxval=50, group=groupLKExec)
+
+lkUseTrendFilter = input.bool(true, "LK Use Daily200+H4EMA Trend Filter", group=groupLKFilter)
+lkUseSessionFilter = input.bool(true, "LK Use Session Filter", group=groupLKFilter)
+lkMaxNoZoneTouchBars = input.int(120, "LK Expire Box if No Zone Touch (Bars)", minval=10, maxval=5000, group=groupLKFilter)
+
+lkAtr = ta.atr(lkAtrLen)
+lkVolMA = ta.sma(volume, lkVolLen)
+lkTargetZoneBuffer = syminfo.mintick * lkTargetZoneBufferTicks
+
+lkPairSym = str.upper(syminfo.ticker)
+lkPresetEnabled = lkPairPresetMode == "Synced Per-Pair (MT5 2020-2026, 2026-02-26)"
+lkPresetEURUSD = lkPresetEnabled and str.contains(lkPairSym, "EURUSD")
+lkPresetGBPUSD = lkPresetEnabled and str.contains(lkPairSym, "GBPUSD")
+lkPresetUSDCAD = lkPresetEnabled and str.contains(lkPairSym, "USDCAD")
+lkPresetUSDJPY = lkPresetEnabled and str.contains(lkPairSym, "USDJPY")
+
+int lkEffMinConsolBars = lkMinConsolBars
+int lkEffMaxConsolBars = lkMaxConsolBars
+int lkEffMinTouches = lkMinTouches
+float lkEffTouchTolPct = lkTouchTolPct
+float lkEffRangeVolBufAtr = lkRangeVolBufAtr
+int lkEffRangeVolBufTicks = lkRangeVolBufTicks
+int lkEffRecentTouchWindow = lkRecentTouchWindow
+int lkEffMinRecentBoundaryTouches = lkMinRecentBoundaryTouches
+int lkEffMaxBoundaryStaleBars = lkMaxBoundaryStaleBars
+float lkEffMaxConsolDriftPct = lkMaxConsolDriftPct
+int lkEffMaxOutsideCloses = lkMaxOutsideCloses
+int lkEffMaxOutsideCloseRun = lkMaxOutsideCloseRun
+float lkEffMinBoxAtr = lkMinBoxAtr
+float lkEffMaxBoxAtr = lkMaxBoxAtr
+float lkEffBreakoutBufferAtr = lkBreakoutBufferAtr
+float lkEffMinBreakoutBodyAtr = lkMinBreakoutBodyAtr
+bool lkEffUseVolumeFilter = lkUseVolumeFilter
+float lkEffVolMult = lkVolMult
+int lkEffMaxRetestBars = lkMaxRetestBars
+float lkEffRetestTolPct = lkRetestTolPct
+float lkEffMinCatalystBodyAtr = lkMinCatalystBodyAtr
+float lkEffCloseNearExtremePct = lkCloseNearExtremePct
+float lkEffMinWickBodyRatio = lkMinWickBodyRatio
+int lkEffEntryExpiryBars = lkEntryExpiryBars
+string lkEffStopMode = lkStopMode
+string lkEffTargetMode = lkTargetMode
+float lkEffTargetRR = lkTargetRR
+float lkEffMinSetupRR = lkMinSetupRR
+bool lkEffUseTrendFilter = lkUseTrendFilter
+bool lkEffUseSessionFilter = lkUseSessionFilter
+int lkEffMaxNoZoneTouchBars = lkMaxNoZoneTouchBars
+
+if lkPresetEURUSD
+    lkEffMinConsolBars := 16
+    lkEffMaxConsolBars := 60
+    lkEffMinTouches := 2
+    lkEffTouchTolPct := 8.0
+    lkEffRangeVolBufAtr := 0.10
+    lkEffRangeVolBufTicks := 5
+    lkEffRecentTouchWindow := 16
+    lkEffMinRecentBoundaryTouches := 2
+    lkEffMaxBoundaryStaleBars := 20
+    lkEffMaxConsolDriftPct := 25.0
+    lkEffMaxOutsideCloses := 1
+    lkEffMaxOutsideCloseRun := 1
+    lkEffMinBoxAtr := 1.2
+    lkEffMaxBoxAtr := 4.0
+    lkEffBreakoutBufferAtr := 0.15
+    lkEffMinBreakoutBodyAtr := 0.35
+    lkEffUseVolumeFilter := true
+    lkEffVolMult := 1.2
+    lkEffMaxRetestBars := 12
+    lkEffRetestTolPct := 10.0
+    lkEffMinCatalystBodyAtr := 0.20
+    lkEffCloseNearExtremePct := 25.0
+    lkEffMinWickBodyRatio := 0.20
+    lkEffEntryExpiryBars := 3
+    lkEffStopMode := "Opposite Box Edge"
+    lkEffTargetMode := "R Multiple"
+    lkEffTargetRR := 2.0
+    lkEffMinSetupRR := 2.0
+    lkEffUseTrendFilter := true
+    lkEffUseSessionFilter := false
+    lkEffMaxNoZoneTouchBars := 120
+else if lkPresetGBPUSD
+    lkEffMinConsolBars := 16
+    lkEffMaxConsolBars := 50
+    lkEffMinTouches := 3
+    lkEffTouchTolPct := 6.0
+    lkEffRangeVolBufAtr := 0.05
+    lkEffRangeVolBufTicks := 3
+    lkEffRecentTouchWindow := 16
+    lkEffMinRecentBoundaryTouches := 1
+    lkEffMaxBoundaryStaleBars := 40
+    lkEffMaxConsolDriftPct := 35.0
+    lkEffMaxOutsideCloses := 2
+    lkEffMaxOutsideCloseRun := 1
+    lkEffMinBoxAtr := 1.4
+    lkEffMaxBoxAtr := 4.0
+    lkEffBreakoutBufferAtr := 0.05
+    lkEffMinBreakoutBodyAtr := 0.15
+    lkEffUseVolumeFilter := true
+    lkEffVolMult := 1.0
+    lkEffMaxRetestBars := 8
+    lkEffRetestTolPct := 15.0
+    lkEffMinCatalystBodyAtr := 0.12
+    lkEffCloseNearExtremePct := 30.0
+    lkEffMinWickBodyRatio := 0.30
+    lkEffEntryExpiryBars := 5
+    lkEffStopMode := "Midpoint of Box"
+    lkEffTargetMode := "R Multiple"
+    lkEffTargetRR := 2.5
+    lkEffMinSetupRR := 2.5
+    lkEffUseTrendFilter := true
+    lkEffUseSessionFilter := true
+    lkEffMaxNoZoneTouchBars := 240
+else if lkPresetUSDCAD
+    lkEffMinConsolBars := 16
+    lkEffMaxConsolBars := 60
+    lkEffMinTouches := 3
+    lkEffTouchTolPct := 6.0
+    lkEffRangeVolBufAtr := 0.15
+    lkEffRangeVolBufTicks := 3
+    lkEffRecentTouchWindow := 12
+    lkEffMinRecentBoundaryTouches := 2
+    lkEffMaxBoundaryStaleBars := 30
+    lkEffMaxConsolDriftPct := 35.0
+    lkEffMaxOutsideCloses := 0
+    lkEffMaxOutsideCloseRun := 1
+    lkEffMinBoxAtr := 1.0
+    lkEffMaxBoxAtr := 4.0
+    lkEffBreakoutBufferAtr := 0.15
+    lkEffMinBreakoutBodyAtr := 0.25
+    lkEffUseVolumeFilter := true
+    lkEffVolMult := 1.2
+    lkEffMaxRetestBars := 8
+    lkEffRetestTolPct := 12.0
+    lkEffMinCatalystBodyAtr := 0.30
+    lkEffCloseNearExtremePct := 25.0
+    lkEffMinWickBodyRatio := 0.30
+    lkEffEntryExpiryBars := 5
+    lkEffStopMode := "Midpoint of Box"
+    lkEffTargetMode := "R Multiple"
+    lkEffTargetRR := 3.0
+    lkEffMinSetupRR := 2.5
+    lkEffUseTrendFilter := true
+    lkEffUseSessionFilter := false
+    lkEffMaxNoZoneTouchBars := 120
+else if lkPresetUSDJPY
+    lkEffMinConsolBars := 30
+    lkEffMaxConsolBars := 50
+    lkEffMinTouches := 2
+    lkEffTouchTolPct := 6.0
+    lkEffRangeVolBufAtr := 0.05
+    lkEffRangeVolBufTicks := 8
+    lkEffRecentTouchWindow := 12
+    lkEffMinRecentBoundaryTouches := 1
+    lkEffMaxBoundaryStaleBars := 20
+    lkEffMaxConsolDriftPct := 20.0
+    lkEffMaxOutsideCloses := 2
+    lkEffMaxOutsideCloseRun := 2
+    lkEffMinBoxAtr := 1.0
+    lkEffMaxBoxAtr := 6.0
+    lkEffBreakoutBufferAtr := 0.10
+    lkEffMinBreakoutBodyAtr := 0.25
+    lkEffUseVolumeFilter := false
+    lkEffVolMult := 1.2
+    lkEffMaxRetestBars := 20
+    lkEffRetestTolPct := 12.0
+    lkEffMinCatalystBodyAtr := 0.30
+    lkEffCloseNearExtremePct := 30.0
+    lkEffMinWickBodyRatio := 0.10
+    lkEffEntryExpiryBars := 3
+    lkEffStopMode := "Midpoint of Box"
+    lkEffTargetMode := "R Multiple"
+    lkEffTargetRR := 3.0
+    lkEffMinSetupRR := 2.0
+    lkEffUseTrendFilter := false
+    lkEffUseSessionFilter := true
+    lkEffMaxNoZoneTouchBars := 60
+
+lkSearchMinBars = math.min(lkEffMinConsolBars, lkEffMaxConsolBars)
+lkSearchMaxBars = math.max(lkEffMinConsolBars, lkEffMaxConsolBars)
+lkEnoughData = bar_index >= lkSearchMaxBars
+
+lkBoxTol(float boxHeight) =>
+    math.max(syminfo.mintick * lkTouchTolTicks, boxHeight * lkEffTouchTolPct * 0.01)
+
+lkRangeVolBuf() =>
+    math.max(syminfo.mintick * lkEffRangeVolBufTicks, lkAtr * lkEffRangeVolBufAtr)
+
+lkRetestTol(float boxHeight) =>
+    math.max(syminfo.mintick * lkRetestTolTicks, boxHeight * lkEffRetestTolPct * 0.01)
+
+// LK target zones
+var float lkSupportZone = na
+var float lkResistanceZone = na
+lkPLow = ta.pivotlow(low, lkTargetPivotLen, lkTargetPivotLen)
+lkPHigh = ta.pivothigh(high, lkTargetPivotLen, lkTargetPivotLen)
+if not na(lkPLow)
+    lkSupportZone := lkPLow
+if not na(lkPHigh)
+    lkResistanceZone := lkPHigh
+
+// LK state
+var int lkState = 0
+var float lkBoxTop = na
+var float lkBoxBottom = na
+var int lkBreakoutBar = na
+var int lkDirection = 0
+var int lkFakeBreakouts = 0
+var float lkEntryPrice = na
+var float lkStopPrice = na
+var float lkTargetPrice = na
+var int lkSetupBar = na
+var int lkOutsideCloseRun = 0
+var int lkLastZoneTouchBar = na
+var int lkLastTopTouchBar = na
+var int lkLastBottomTouchBar = na
+
+// LK events + trigger payload
+lkBullSetupEvent = false
+lkBearSetupEvent = false
+lkSetupCanceledEvent = false
+lkBullEntryTrigger = false
+lkBearEntryTrigger = false
+lkBullBreakoutEvent = false
+lkBearBreakoutEvent = false
+lkBullRetestEvent = false
+lkBearRetestEvent = false
+
+int lkTrigDir = 0
+float lkTrigEntry = na
+float lkTrigStop = na
+float lkTrigTarget = na
+float lkTrigBE = na
+
+// Candidate box scan
+int lkCandLen = na
+float lkCandTop = na
+float lkCandBottom = na
+if lkEnoughData
+    for len = lkSearchMinBars to lkSearchMaxBars
+        t = ta.highest(high, len)
+        b = ta.lowest(low, len)
+        h = t - b
+        tol = lkBoxTol(h) + lkRangeVolBuf()
+        recentLen = math.min(lkEffRecentTouchWindow, len)
+
+        topTouches = countTopTouches(t, tol, len)
+        bottomTouches = countBottomTouches(b, tol, len)
+        topTouchesRecent = countTopTouches(t, tol, recentLen)
+        bottomTouchesRecent = countBottomTouches(b, tol, recentLen)
+        outsideCloses = countOutsideCloses(t, b, tol, len)
+        drift = math.abs(close - close[len - 1])
+
+        heightOk = h >= lkAtr * lkEffMinBoxAtr and h <= lkAtr * lkEffMaxBoxAtr
+        touchesOk = topTouches >= lkEffMinTouches and bottomTouches >= lkEffMinTouches
+        recentBoundaryActive = topTouchesRecent >= lkEffMinRecentBoundaryTouches and bottomTouchesRecent >= lkEffMinRecentBoundaryTouches
+        driftOk = h > 0 and drift <= h * lkEffMaxConsolDriftPct * 0.01
+        outsideOk = outsideCloses <= lkEffMaxOutsideCloses
+        valid = heightOk and touchesOk and recentBoundaryActive and driftOk and outsideOk
+
+        if valid and (na(lkCandLen) or len > lkCandLen)
+            lkCandLen := len
+            lkCandTop := t
+            lkCandBottom := b
+
+lkCandidateValid = not na(lkCandLen)
+
+if barstate.isconfirmed and enableLastKiss
+    if lkState == 0 and lkCandidateValid
+        lkBoxTop := lkCandTop
+        lkBoxBottom := lkCandBottom
+        lkBreakoutBar := na
+        lkDirection := 0
+        lkFakeBreakouts := 0
+        lkEntryPrice := na
+        lkStopPrice := na
+        lkTargetPrice := na
+        lkSetupBar := na
+        lkOutsideCloseRun := 0
+        lkLastZoneTouchBar := bar_index
+        lkLastTopTouchBar := bar_index
+        lkLastBottomTouchBar := bar_index
+        lkState := 1
+
+    if lkState == 1
+        activeHeight = lkBoxTop - lkBoxBottom
+        activeTouchTol = lkBoxTol(activeHeight) + lkRangeVolBuf()
+        inBoxNow = high >= lkBoxBottom - activeTouchTol and low <= lkBoxTop + activeTouchTol
+        topTouchedNow = high >= lkBoxTop - activeTouchTol
+        bottomTouchedNow = low <= lkBoxBottom + activeTouchTol
+        closeOutsideNow = close > lkBoxTop + activeTouchTol or close < lkBoxBottom - activeTouchTol
+
+        if inBoxNow
+            lkLastZoneTouchBar := bar_index
+        if topTouchedNow
+            lkLastTopTouchBar := bar_index
+        if bottomTouchedNow
+            lkLastBottomTouchBar := bar_index
+
+        lkOutsideCloseRun := closeOutsideNow ? lkOutsideCloseRun + 1 : 0
+
+        inactiveTooLong = not na(lkLastZoneTouchBar) and (bar_index - lkLastZoneTouchBar > lkEffMaxNoZoneTouchBars)
+        topStale = not na(lkLastTopTouchBar) and (bar_index - lkLastTopTouchBar > lkEffMaxBoundaryStaleBars)
+        bottomStale = not na(lkLastBottomTouchBar) and (bar_index - lkLastBottomTouchBar > lkEffMaxBoundaryStaleBars)
+        staleBoundary = topStale or bottomStale
+        outsideRunInvalid = lkOutsideCloseRun > lkEffMaxOutsideCloseRun
+
+        if inactiveTooLong or staleBoundary or outsideRunInvalid
+            lkSetupCanceledEvent := true
+            lkState := 0
+            lkBoxTop := na
+            lkBoxBottom := na
+            lkBreakoutBar := na
+            lkDirection := 0
+            lkFakeBreakouts := 0
+            lkEntryPrice := na
+            lkStopPrice := na
+            lkTargetPrice := na
+            lkSetupBar := na
+            lkOutsideCloseRun := 0
+            lkLastZoneTouchBar := na
+            lkLastTopTouchBar := na
+            lkLastBottomTouchBar := na
+
+        if not inactiveTooLong and not staleBoundary and not outsideRunInvalid
+            breakBuf = lkAtr * lkEffBreakoutBufferAtr
+            breakoutBodyOk = math.abs(close - open) >= lkAtr * lkEffMinBreakoutBodyAtr
+            breakoutVolumeOk = not lkEffUseVolumeFilter or (volume > lkVolMA * lkEffVolMult)
+
+            longBreakRaw = lkBreakoutCloseOnly ? close > lkBoxTop + breakBuf : high > lkBoxTop + breakBuf
+            shortBreakRaw = lkBreakoutCloseOnly ? close < lkBoxBottom - breakBuf : low < lkBoxBottom - breakBuf
+
+            longBreak = longBreakRaw and close[1] <= lkBoxTop and breakoutBodyOk and breakoutVolumeOk
+            shortBreak = shortBreakRaw and close[1] >= lkBoxBottom and breakoutBodyOk and breakoutVolumeOk
+
+            if longBreak
+                lkDirection := 1
+                lkBreakoutBar := bar_index
+                lkState := 2
+                lkBullBreakoutEvent := true
+                lkOutsideCloseRun := 0
+            else if shortBreak
+                lkDirection := -1
+                lkBreakoutBar := bar_index
+                lkState := 2
+                lkBearBreakoutEvent := true
+                lkOutsideCloseRun := 0
+
+    if lkState == 2
+        barsFromBreak = bar_index - lkBreakoutBar
+        bHeight = lkBoxTop - lkBoxBottom
+        rTol = lkRetestTol(bHeight)
+        edge = lkDirection == 1 ? lkBoxTop : lkBoxBottom
+        touchedEdge = high >= edge - rTol and low <= edge + rTol
+
+        if touchedEdge
+            lkBullRetestEvent := lkDirection == 1
+            lkBearRetestEvent := lkDirection == -1
+
+        rng = math.max(high - low, syminfo.mintick)
+        body = math.abs(close - open)
+        bodyOk = body >= lkAtr * lkEffMinCatalystBodyAtr
+        closeNearHigh = (high - close) <= rng * lkEffCloseNearExtremePct * 0.01
+        closeNearLow = (close - low) <= rng * lkEffCloseNearExtremePct * 0.01
+        lowerWick = math.min(open, close) - low
+        upperWick = high - math.max(open, close)
+        bullWickOk = lowerWick >= body * lkEffMinWickBodyRatio
+        bearWickOk = upperWick >= body * lkEffMinWickBodyRatio
+
+        bullCatalyst = lkDirection == 1 and touchedEdge and close > open and bodyOk and closeNearHigh and bullWickOk
+        bearCatalyst = lkDirection == -1 and touchedEdge and close < open and bodyOk and closeNearLow and bearWickOk
+
+        trendOk = not lkEffUseTrendFilter or (lkDirection == 1 ? sharedTrendLong : sharedTrendShort)
+        sessionOk = not lkEffUseSessionFilter or sharedInSession
+
+        if (bullCatalyst or bearCatalyst) and trendOk and sessionOk
+            lkEntryPrice := lkDirection == 1 ? high + syminfo.mintick * lkEntryOffsetTicks : low - syminfo.mintick * lkEntryOffsetTicks
+            lkBoxMid = (lkBoxTop + lkBoxBottom) * 0.5
+            lkStopPrice := lkEffStopMode == "Midpoint of Box" ? lkBoxMid : lkEffStopMode == "Opposite Box Edge" ? (lkDirection == 1 ? lkBoxBottom : lkBoxTop) : (lkDirection == 1 ? lkBoxBottom - lkAtr * lkStopAtrMult : lkBoxTop + lkAtr * lkStopAtrMult)
+            lkRisk = math.max(math.abs(lkEntryPrice - lkStopPrice), syminfo.mintick)
+            lkRrTarget = lkEntryPrice + lkDirection * lkRisk * lkEffTargetRR
+            lkZoneTargetLong = not na(lkResistanceZone) and lkResistanceZone > lkEntryPrice ? lkResistanceZone - lkTargetZoneBuffer : na
+            lkZoneTargetShort = not na(lkSupportZone) and lkSupportZone < lkEntryPrice ? lkSupportZone + lkTargetZoneBuffer : na
+            lkZoneTarget = lkDirection == 1 ? lkZoneTargetLong : lkZoneTargetShort
+            lkTargetPrice := lkEffTargetMode == "Nearest Zone" and not na(lkZoneTarget) ? lkZoneTarget : lkRrTarget
+            lkSetupRR = lkDirection == 1 ? (lkTargetPrice - lkEntryPrice) / lkRisk : (lkEntryPrice - lkTargetPrice) / lkRisk
+
+            if lkSetupRR >= lkEffMinSetupRR
+                lkSetupBar := bar_index
+                lkState := 3
+                lkBullSetupEvent := lkDirection == 1
+                lkBearSetupEvent := lkDirection == -1
+            else
+                lkEntryPrice := na
+                lkStopPrice := na
+                lkTargetPrice := na
+        else
+            failedBreak = lkDirection == 1 ? close < lkBoxTop : close > lkBoxBottom
+            timedOut = barsFromBreak > lkEffMaxRetestBars
+            if failedBreak or timedOut
+                lkFakeBreakouts += 1
+                lkSetupCanceledEvent := true
+                lkDirection := 0
+                lkBreakoutBar := na
+                lkEntryPrice := na
+                lkStopPrice := na
+                lkTargetPrice := na
+                lkSetupBar := na
+                if lkFakeBreakouts >= lkMaxFakeBreakouts
+                    lkState := 0
+                    lkBoxTop := na
+                    lkBoxBottom := na
+                    lkFakeBreakouts := 0
+                    lkOutsideCloseRun := 0
+                    lkLastZoneTouchBar := na
+                    lkLastTopTouchBar := na
+                    lkLastBottomTouchBar := na
+                else
+                    lkState := 1
+                    lkLastZoneTouchBar := bar_index
+                    lkOutsideCloseRun := 0
+
+    if lkState == 3
+        barsSinceSetup = bar_index - lkSetupBar
+        entryTriggered = lkDirection == 1 ? high >= lkEntryPrice : low <= lkEntryPrice
+        invalidBeforeTrigger = lkDirection == 1 ? low <= lkStopPrice : high >= lkStopPrice
+        expired = barsSinceSetup > lkEffEntryExpiryBars
+
+        if entryTriggered
+            lkBullEntryTrigger := lkDirection == 1
+            lkBearEntryTrigger := lkDirection == -1
+            lkTrigDir := lkDirection
+            lkTrigEntry := lkEntryPrice
+            lkTrigStop := lkStopPrice
+            lkTrigTarget := lkTargetPrice
+            lkRiskNow = math.max(math.abs(lkEntryPrice - lkStopPrice), syminfo.mintick)
+            lkTrigBE := lkDirection == 1 ? lkEntryPrice + lkRiskNow * globalBreakevenR : lkEntryPrice - lkRiskNow * globalBreakevenR
+
+            lkState := 0
+            lkBoxTop := na
+            lkBoxBottom := na
+            lkBreakoutBar := na
+            lkDirection := 0
+            lkFakeBreakouts := 0
+            lkEntryPrice := na
+            lkStopPrice := na
+            lkTargetPrice := na
+            lkSetupBar := na
+            lkOutsideCloseRun := 0
+            lkLastZoneTouchBar := na
+            lkLastTopTouchBar := na
+            lkLastBottomTouchBar := na
+        else if invalidBeforeTrigger or expired
+            lkSetupCanceledEvent := true
+            lkState := 0
+            lkBoxTop := na
+            lkBoxBottom := na
+            lkBreakoutBar := na
+            lkDirection := 0
+            lkFakeBreakouts := 0
+            lkEntryPrice := na
+            lkStopPrice := na
+            lkTargetPrice := na
+            lkSetupBar := na
+            lkOutsideCloseRun := 0
+            lkLastZoneTouchBar := na
+            lkLastTopTouchBar := na
+            lkLastBottomTouchBar := na
+
+// ============================================================================
+// 4) Big Shadow Module (pending-order logic only)
+// ============================================================================
+groupBSProfile = "4.0) Big Shadow - Profile"
+groupBSPattern = "4.1) Big Shadow - Pattern"
+groupBSLocation = "4.2) Big Shadow - Location"
+groupBSExec = "4.3) Big Shadow - Execution"
+groupBSFilter = "4.4) Big Shadow - Filters"
+
+bsProfileMode = input.string("Balanced", "BS Profile Mode", options=["Balanced", "A+ Strict", "Custom"], group=groupBSProfile)
+bsPairPresetMode = input.string("MT5 Per-Pair >=2R (2020-2026)", "BS Pair Preset Mode", options=["MT5 Per-Pair >=2R (2020-2026)", "Off (Manual Inputs)"], group=groupBSProfile)
+
+bsAtrLen = input.int(14, "BS ATR Length", minval=5, maxval=100, group=groupBSPattern)
+bsRequireOutsideBar = input.bool(true, "BS Require HH+LL vs previous", group=groupBSPattern)
+bsDominanceMode = input.string("Previous 10 Candles (A+)", "BS Dominance Rule", options=["Previous 5 Candles", "Previous 10 Candles (A+)"], group=groupBSPattern)
+bsMinRangeVsPrev = input.float(1.20, "BS Min Range vs Previous", minval=1.0, maxval=5.0, step=0.05, group=groupBSPattern)
+bsMinRangeAtr = input.float(1.0, "BS Min Range (ATR)", minval=0.2, maxval=5.0, step=0.1, group=groupBSPattern)
+bsCloseExtremeTicks = input.int(10, "BS Close-to-Extreme Ticks", minval=1, maxval=200, group=groupBSPattern)
+bsCloseExtremeAtr = input.float(0.03, "BS Close-to-Extreme ATR", minval=0.0, maxval=0.5, step=0.01, group=groupBSPattern)
+
+bsUseZoneFilter = input.bool(false, "BS Require Zone Confluence", group=groupBSLocation)
+bsPivotLen = input.int(3, "BS Pivot Length", minval=1, maxval=10, group=groupBSLocation)
+bsZoneTolTicks = input.int(8, "BS Zone Tolerance (Ticks)", minval=1, maxval=200, group=groupBSLocation)
+bsZoneTolAtr = input.float(0.10, "BS Zone Tolerance (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupBSLocation)
+bsRequireExtreme = input.bool(false, "BS Require Extreme", group=groupBSLocation)
+bsExtremeLookback = input.int(20, "BS Extreme Lookback", minval=7, maxval=200, group=groupBSLocation)
+bsUseRoomLeftFilter = input.bool(false, "BS Require Room to the Left", group=groupBSLocation)
+bsRoomLeftBars = input.int(7, "BS Room-Left Bars", minval=7, maxval=100, group=groupBSLocation)
+
+bsEntryOffsetTicks = input.int(2, "BS Entry Offset (Ticks)", minval=0, maxval=50, group=groupBSExec)
+bsStopOffsetTicks = input.int(2, "BS Stop Buffer (Ticks)", minval=0, maxval=50, group=groupBSExec)
+bsStopOffsetAtr = input.float(0.05, "BS Stop Buffer (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupBSExec)
+bsTriggerMode = input.string("Next Candle (A+)", "BS Entry Trigger Window", options=["Next Candle (A+)", "Within N Candles"], group=groupBSExec)
+bsEntryExpiryBars = input.int(5, "BS N Candles (if selected)", minval=2, maxval=10, group=groupBSExec)
+bsTargetMode = input.string("R Multiple", "BS Target Mode", options=["Nearest Zone", "R Multiple"], group=groupBSExec)
+bsTargetRR = input.float(2.0, "BS R Multiple Target", minval=2.0, maxval=10.0, step=0.1, group=groupBSExec)
+bsMinSetupRR = input.float(2.0, "BS Minimum Setup R", minval=2.0, maxval=10.0, step=0.1, group=groupBSExec)
+bsTargetZoneBufferTicks = input.int(2, "BS Target Zone Buffer (Ticks)", minval=0, maxval=50, group=groupBSExec)
+bsBreakevenAtR = input.float(1.0, "BS Move SL to BE at +R", minval=0.5, maxval=5.0, step=0.1, group=groupBSExec)
+
+bsUseTrendFilter = input.bool(true, "BS Use Daily200+H4EMA", group=groupBSFilter)
+bsUseSessionFilter = input.bool(false, "BS Use Session Filter", group=groupBSFilter)
+
+bsAtr = ta.atr(bsAtrLen)
+bsZoneTol = tolFromAtr(bsAtr, bsZoneTolAtr, bsZoneTolTicks)
+bsTargetZoneBuffer = syminfo.mintick * bsTargetZoneBufferTicks
+bsStrictProfile = bsProfileMode == "A+ Strict"
+bsCustomProfile = bsProfileMode == "Custom"
+
+bsPairKey = str.upper(syminfo.basecurrency + syminfo.currency)
+bsUsePairPreset = bsPairPresetMode == "MT5 Per-Pair >=2R (2020-2026)"
+bsPresetEURUSD = bsUsePairPreset and bsPairKey == "EURUSD"
+bsPresetGBPUSD = bsUsePairPreset and bsPairKey == "GBPUSD"
+bsPresetUSDJPY = bsUsePairPreset and bsPairKey == "USDJPY"
+bsPresetUSDCAD = bsUsePairPreset and bsPairKey == "USDCAD"
+bsPresetMajor = bsPresetEURUSD or bsPresetGBPUSD or bsPresetUSDJPY or bsPresetUSDCAD
+bsPresetGBPUSDJPY = bsPresetGBPUSD or bsPresetUSDJPY
+
+bsEffUseZoneFilter = bsPresetMajor ? false : bsUseZoneFilter
+bsEffRequireOutsideBar = bsPresetUSDCAD ? true : bsPresetMajor ? false : bsRequireOutsideBar
+bsEffDominanceMode = bsPresetGBPUSDJPY ? "Previous 10 Candles (A+)" : bsPresetMajor ? "Previous 5 Candles" : bsDominanceMode
+bsEffMinRangeVsPrev = bsPresetEURUSD or bsPresetUSDCAD ? 1.2 : bsPresetGBPUSDJPY ? 1.1 : bsMinRangeVsPrev
+bsEffMinRangeAtr = bsPresetEURUSD ? 0.9 : bsPresetUSDCAD ? 0.5 : bsPresetGBPUSDJPY ? 0.7 : bsMinRangeAtr
+bsEffCloseExtremeTicks = bsPresetEURUSD ? 20 : bsPresetUSDCAD ? 15 : bsPresetGBPUSDJPY ? 20 : bsCloseExtremeTicks
+bsEffCloseExtremeAtr = bsPresetEURUSD ? 0.02 : bsPresetUSDCAD ? 0.05 : bsPresetGBPUSDJPY ? 0.05 : bsCloseExtremeAtr
+bsEffEntryOffsetTicks = bsPresetEURUSD ? 1 : bsPresetUSDCAD ? 2 : bsPresetGBPUSDJPY ? 2 : bsEntryOffsetTicks
+bsEffStopOffsetTicks = bsPresetEURUSD ? 1 : bsPresetUSDCAD ? 3 : bsPresetGBPUSDJPY ? 1 : bsStopOffsetTicks
+bsEffStopOffsetAtr = bsPresetEURUSD ? 0.10 : bsPresetUSDCAD ? 0.02 : bsPresetGBPUSDJPY ? 0.05 : bsStopOffsetAtr
+bsEffTriggerMode = bsPresetUSDCAD ? "Within N Candles" : bsPresetMajor ? "Next Candle (A+)" : bsTriggerMode
+bsEffEntryExpiryBars = bsPresetUSDCAD ? 3 : bsPresetGBPUSDJPY ? 7 : bsPresetEURUSD ? 5 : bsEntryExpiryBars
+bsEffBreakevenAtR = bsPresetEURUSD ? 1.2 : bsPresetUSDCAD ? 1.5 : bsPresetGBPUSDJPY ? 1.5 : bsBreakevenAtR
+bsEffRequireExtreme = bsPresetEURUSD ? true : bsPresetMajor ? false : bsCustomProfile ? bsRequireExtreme : bsStrictProfile
+bsEffUseRoomLeftFilter = bsPresetMajor ? false : bsCustomProfile ? bsUseRoomLeftFilter : bsStrictProfile
+bsEffUseSessionFilter = bsPresetMajor ? false : bsCustomProfile ? bsUseSessionFilter : bsStrictProfile
+bsEffUseTrendFilter = bsPresetMajor ? false : bsUseTrendFilter
+
+bsCloseTol = tolFromAtr(bsAtr, bsEffCloseExtremeAtr, bsEffCloseExtremeTicks)
+bsStopBuf = tolFromAtr(bsAtr, bsEffStopOffsetAtr, bsEffStopOffsetTicks)
+bsDominanceLookback = bsEffDominanceMode == "Previous 10 Candles (A+)" ? 10 : 5
+
+var float bsSupportZone = na
+var float bsResistanceZone = na
+bsPLow = ta.pivotlow(low, bsPivotLen, bsPivotLen)
+bsPHigh = ta.pivothigh(high, bsPivotLen, bsPivotLen)
+if not na(bsPLow)
+    bsSupportZone := bsPLow
+if not na(bsPHigh)
+    bsResistanceZone := bsPHigh
+
+bsAtSupport = not na(bsSupportZone) and low <= bsSupportZone + bsZoneTol and low >= bsSupportZone - bsZoneTol
+bsAtResistance = not na(bsResistanceZone) and high >= bsResistanceZone - bsZoneTol and high <= bsResistanceZone + bsZoneTol
+
+bsEnoughBars = bar_index > math.max(math.max(bsDominanceLookback, bsRoomLeftBars), bsExtremeLookback) + 2
+bsCandleRange = math.max(high - low, syminfo.mintick)
+bsPrevRange = math.max(high[1] - low[1], syminfo.mintick)
+bsPrevMaxRange = ta.highest(high[1] - low[1], bsDominanceLookback)
+
+bsOutsideBar = high > high[1] and low < low[1]
+bsDominantRange = not na(bsPrevMaxRange) and bsCandleRange > bsPrevMaxRange and bsCandleRange >= bsPrevRange * bsEffMinRangeVsPrev and bsCandleRange >= bsAtr * bsEffMinRangeAtr
+
+bsBullCloseOk = (high - close) <= bsCloseTol and close > open
+bsBearCloseOk = (close - low) <= bsCloseTol and close < open
+
+bsBullExtreme = low <= ta.lowest(low, bsExtremeLookback)
+bsBearExtreme = high >= ta.highest(high, bsExtremeLookback)
+
+bsBullRoomLeftZone = not na(bsSupportZone) and ta.lowest(low[1], bsRoomLeftBars) > bsSupportZone + bsZoneTol
+bsBearRoomLeftZone = not na(bsResistanceZone) and ta.highest(high[1], bsRoomLeftBars) < bsResistanceZone - bsZoneTol
+bsBullRoomLeftExtreme = ta.lowest(low[1], bsRoomLeftBars) > low + bsZoneTol
+bsBearRoomLeftExtreme = ta.highest(high[1], bsRoomLeftBars) < high - bsZoneTol
+bsBullRoomLeft = bsEffUseZoneFilter ? bsBullRoomLeftZone : bsBullRoomLeftExtreme
+bsBearRoomLeft = bsEffUseZoneFilter ? bsBearRoomLeftZone : bsBearRoomLeftExtreme
+
+bsBullPattern = bsEnoughBars and bsDominantRange and (not bsEffRequireOutsideBar or bsOutsideBar) and bsBullCloseOk
+bsBearPattern = bsEnoughBars and bsDominantRange and (not bsEffRequireOutsideBar or bsOutsideBar) and bsBearCloseOk
+
+bsBullLocationOk = (not bsEffUseZoneFilter or bsAtSupport) and (not bsEffRequireExtreme or bsBullExtreme) and (not bsEffUseRoomLeftFilter or bsBullRoomLeft)
+bsBearLocationOk = (not bsEffUseZoneFilter or bsAtResistance) and (not bsEffRequireExtreme or bsBearExtreme) and (not bsEffUseRoomLeftFilter or bsBearRoomLeft)
+
+bsBullFilterOk = (not bsEffUseTrendFilter or sharedTrendLong) and (not bsEffUseSessionFilter or sharedInSession)
+bsBearFilterOk = (not bsEffUseTrendFilter or sharedTrendShort) and (not bsEffUseSessionFilter or sharedInSession)
+
+bsBullSignal = barstate.isconfirmed and bsBullPattern and bsBullLocationOk and bsBullFilterOk
+bsBearSignal = barstate.isconfirmed and bsBearPattern and bsBearLocationOk and bsBearFilterOk
+
+var int bsPendingDir = 0
+var float bsPendingEntry = na
+var float bsPendingStop = na
+var float bsPendingTarget = na
+var float bsPendingBE = na
+var int bsPendingBar = na
+
+bsBullSetupEvent = false
+bsBearSetupEvent = false
+bsSetupCanceledEvent = false
+bsBullEntryTrigger = false
+bsBearEntryTrigger = false
+
+int bsTrigDir = 0
+float bsTrigEntry = na
+float bsTrigStop = na
+float bsTrigTarget = na
+float bsTrigBE = na
+
+if barstate.isconfirmed and enableBigShadow
+    if bsPendingDir == 0
+        if bsBullSignal and not bsBearSignal
+            e = high + syminfo.mintick * bsEffEntryOffsetTicks
+            s = low - bsStopBuf
+            r = math.max(e - s, syminfo.mintick)
+            zoneT = not na(bsResistanceZone) and bsResistanceZone > e ? bsResistanceZone - bsTargetZoneBuffer : na
+            rrT = e + r * bsTargetRR
+            t = bsTargetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+            setupRR = (t - e) / r
+
+            if setupRR >= bsMinSetupRR
+                bsPendingDir := 1
+                bsPendingEntry := e
+                bsPendingStop := s
+                bsPendingTarget := t
+                bsPendingBE := e + r * bsEffBreakevenAtR
+                bsPendingBar := bar_index
+                bsBullSetupEvent := true
+
+        else if bsBearSignal and not bsBullSignal
+            e = low - syminfo.mintick * bsEffEntryOffsetTicks
+            s = high + bsStopBuf
+            r = math.max(s - e, syminfo.mintick)
+            zoneT = not na(bsSupportZone) and bsSupportZone < e ? bsSupportZone + bsTargetZoneBuffer : na
+            rrT = e - r * bsTargetRR
+            t = bsTargetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+            setupRR = (e - t) / r
+
+            if setupRR >= bsMinSetupRR
+                bsPendingDir := -1
+                bsPendingEntry := e
+                bsPendingStop := s
+                bsPendingTarget := t
+                bsPendingBE := e - r * bsEffBreakevenAtR
+                bsPendingBar := bar_index
+                bsBearSetupEvent := true
+
+    if bsPendingDir != 0
+        barsSinceSignal = bar_index - bsPendingBar
+        canTrigger = bsEffTriggerMode == "Next Candle (A+)" ? barsSinceSignal == 1 : barsSinceSignal >= 1
+        expired = bsEffTriggerMode == "Next Candle (A+)" ? barsSinceSignal > 1 : barsSinceSignal > bsEffEntryExpiryBars
+
+        invalidBeforeTrigger = canTrigger and (bsPendingDir == 1 ? low <= bsPendingStop : high >= bsPendingStop)
+        triggered = canTrigger and (bsPendingDir == 1 ? high >= bsPendingEntry : low <= bsPendingEntry)
+
+        if invalidBeforeTrigger
+            bsSetupCanceledEvent := true
+            bsPendingDir := 0
+            bsPendingEntry := na
+            bsPendingStop := na
+            bsPendingTarget := na
+            bsPendingBE := na
+            bsPendingBar := na
+        else if triggered
+            bsBullEntryTrigger := bsPendingDir == 1
+            bsBearEntryTrigger := bsPendingDir == -1
+            bsTrigDir := bsPendingDir
+            bsTrigEntry := bsPendingEntry
+            bsTrigStop := bsPendingStop
+            bsTrigTarget := bsPendingTarget
+            bsTrigBE := bsPendingBE
+
+            bsPendingDir := 0
+            bsPendingEntry := na
+            bsPendingStop := na
+            bsPendingTarget := na
+            bsPendingBE := na
+            bsPendingBar := na
+        else if expired
+            bsSetupCanceledEvent := true
+            bsPendingDir := 0
+            bsPendingEntry := na
+            bsPendingStop := na
+            bsPendingTarget := na
+            bsPendingBE := na
+            bsPendingBar := na
+
+// ============================================================================
+// 5) Wammie / Moolah Module (pending-order logic only)
+// ============================================================================
+groupWMStructure = "5.1) Wammie/Moolah - Structure"
+groupWMCandle = "5.2) Wammie/Moolah - Catalyst"
+groupWMExec = "5.3) Wammie/Moolah - Execution"
+groupWMFilter = "5.4) Wammie/Moolah - Filters"
+
+wmAtrLen = input.int(14, "WM ATR Length", minval=5, maxval=100, group=groupWMStructure)
+wmPivotLen = input.int(3, "WM Pivot Length", minval=1, maxval=10, group=groupWMStructure)
+wmUseZoneFilter = input.bool(false, "WM Require Zone Confluence", group=groupWMStructure)
+wmZoneSource = input.string("Auto Pivot (Dynamic)", "WM Zone Source", options=["Auto Pivot (Dynamic)", "Manual Static"], group=groupWMStructure)
+wmFreezeAutoZones = input.bool(false, "WM Freeze Auto Zones", group=groupWMStructure)
+wmManualSupportZoneInput = input.float(0.0, "WM Manual Support Zone (0 = unset)", group=groupWMStructure)
+wmManualResistanceZoneInput = input.float(0.0, "WM Manual Resistance Zone (0 = unset)", group=groupWMStructure)
+wmZoneTolTicks = input.int(8, "WM Zone Tolerance (Ticks)", minval=1, maxval=200, group=groupWMStructure)
+wmZoneTolAtr = input.float(0.10, "WM Zone Tolerance (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupWMStructure)
+wmMinBarsBetweenTouches = input.int(4, "WM Min Candles Between Touches", minval=2, maxval=50, group=groupWMStructure)
+wmIdealBarsBetweenTouches = input.int(20, "WM A+ Candles Between Touches", minval=6, maxval=100, group=groupWMStructure)
+wmMaxBarsBetweenTouches = input.int(80, "WM Max Candles Between Touches", minval=10, maxval=WM_MAX_SCAN_BARS, group=groupWMStructure)
+wmMinSecondTouchTicks = input.int(0, "WM Min HL/LH Gap (Ticks)", minval=0, maxval=100, group=groupWMStructure)
+wmMinSecondTouchAtr = input.float(0.0, "WM Min HL/LH Gap (ATR)", minval=0.0, maxval=0.5, step=0.01, group=groupWMStructure)
+wmMaxSecondTouchTicks = input.int(80, "WM Max 2nd Touch Distance (Ticks)", minval=1, maxval=500, group=groupWMStructure)
+wmMaxSecondTouchAtr = input.float(0.80, "WM Max 2nd Touch Distance (ATR)", minval=0.01, maxval=5.0, step=0.01, group=groupWMStructure)
+wmMaxInterimRetests = input.int(1, "WM Max Interim Zone Retests", minval=0, maxval=10, group=groupWMStructure)
+wmRequireFirstTouchExtreme = input.bool(true, "WM Require First Touch at Local Extreme", group=groupWMStructure)
+wmExtremeLookback = input.int(20, "WM Extreme Lookback", minval=7, maxval=200, group=groupWMStructure)
+wmRequireBounceBetweenTouches = input.bool(false, "WM Require Bounce Between Touches", group=groupWMStructure)
+wmMinBounceAtr = input.float(0.5, "WM Min Bounce From Zone (ATR)", minval=0.0, maxval=5.0, step=0.1, group=groupWMStructure)
+
+wmRequireCandleColor = input.bool(false, "WM Require Bull/Bear Candle Color", group=groupWMCandle)
+wmMinBodyAtr = input.float(0.08, "WM Min Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupWMCandle)
+wmCloseNearExtremeTicks = input.int(10, "WM Close-to-Extreme Ticks", minval=1, maxval=200, group=groupWMCandle)
+wmCloseNearExtremeAtr = input.float(0.05, "WM Close-to-Extreme ATR", minval=0.0, maxval=0.5, step=0.01, group=groupWMCandle)
+wmMinRejectionWickBody = input.float(0.10, "WM Min Rejection Wick/Body", minval=0.0, maxval=5.0, step=0.05, group=groupWMCandle)
+
+wmEntryOffsetTicks = input.int(2, "WM Entry Offset (Ticks)", minval=0, maxval=50, group=groupWMExec)
+wmStopOffsetTicks = input.int(2, "WM Stop Buffer (Ticks)", minval=0, maxval=50, group=groupWMExec)
+wmStopOffsetAtr = input.float(0.05, "WM Stop Buffer (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupWMExec)
+wmTriggerMode = input.string("Within N Candles (3-5)", "WM Entry Trigger Window", options=["Within N Candles (3-5)", "Next Candle (A+)"], group=groupWMExec)
+wmEntryExpiryBars = input.int(5, "WM N Candles (if selected)", minval=2, maxval=10, group=groupWMExec)
+wmTargetMode = input.string("R Multiple", "WM Target Mode", options=["Nearest Zone", "R Multiple"], group=groupWMExec)
+wmTargetRR = input.float(2.0, "WM R Multiple Target", minval=1.0, maxval=10.0, step=0.1, group=groupWMExec)
+wmMinSetupRR = input.float(2.0, "WM Minimum Setup R", minval=1.0, maxval=10.0, step=0.1, group=groupWMExec)
+wmTargetZoneBufferTicks = input.int(2, "WM Target Zone Buffer (Ticks)", minval=0, maxval=50, group=groupWMExec)
+wmBreakevenAtR = input.float(1.0, "WM Move SL to BE at +R", minval=0.5, maxval=5.0, step=0.1, group=groupWMExec)
+
+wmUseTrendFilter = input.bool(true, "WM Use Daily200+H4EMA", group=groupWMFilter)
+wmUseSessionFilter = input.bool(true, "WM Use Session Filter", group=groupWMFilter)
+wmUseMacdFilter = input.bool(false, "WM Use MACD Direction Filter", group=groupWMFilter)
+wmMacdFast = input.int(12, "WM MACD Fast", minval=5, maxval=50, group=groupWMFilter)
+wmMacdSlow = input.int(26, "WM MACD Slow", minval=10, maxval=100, group=groupWMFilter)
+wmMacdSignalLen = input.int(9, "WM MACD Signal", minval=3, maxval=30, group=groupWMFilter)
+wmUseRsiFilter = input.bool(false, "WM Use RSI OB/OS Filter", group=groupWMFilter)
+wmRsiLen = input.int(14, "WM RSI Length", minval=5, maxval=50, group=groupWMFilter)
+wmRsiLongMax = input.float(35.0, "WM RSI Max for Wammie", minval=5.0, maxval=60.0, step=0.5, group=groupWMFilter)
+wmRsiShortMin = input.float(65.0, "WM RSI Min for Moolah", minval=40.0, maxval=95.0, step=0.5, group=groupWMFilter)
+wmUseRoomLeftFilter = input.bool(false, "WM Require Room to the Left", group=groupWMFilter)
+wmRoomLeftBars = input.int(7, "WM Room-Left Bars", minval=3, maxval=100, group=groupWMFilter)
+
+wmAtr = ta.atr(wmAtrLen)
+
+var float wmAutoSupportZone = na
+var float wmAutoResistanceZone = na
+
+wmPLow = ta.pivotlow(low, wmPivotLen, wmPivotLen)
+wmPHigh = ta.pivothigh(high, wmPivotLen, wmPivotLen)
+if not na(wmPLow)
+    wmAutoSupportZone := wmFreezeAutoZones and not na(wmAutoSupportZone) ? wmAutoSupportZone : wmPLow
+if not na(wmPHigh)
+    wmAutoResistanceZone := wmFreezeAutoZones and not na(wmAutoResistanceZone) ? wmAutoResistanceZone : wmPHigh
+
+wmManualSupportZone = wmManualSupportZoneInput > 0 ? wmManualSupportZoneInput : na
+wmManualResistanceZone = wmManualResistanceZoneInput > 0 ? wmManualResistanceZoneInput : na
+wmSupportZone = wmZoneSource == "Manual Static" ? wmManualSupportZone : wmAutoSupportZone
+wmResistanceZone = wmZoneSource == "Manual Static" ? wmManualResistanceZone : wmAutoResistanceZone
+
+wmZoneTol = tolFromAtr(wmAtr, wmZoneTolAtr, wmZoneTolTicks)
+wmSecondTouchDeltaMin = tolFromAtr(wmAtr, wmMinSecondTouchAtr, wmMinSecondTouchTicks)
+wmSecondTouchDeltaMax = math.max(wmSecondTouchDeltaMin, tolFromAtr(wmAtr, wmMaxSecondTouchAtr, wmMaxSecondTouchTicks))
+wmCloseTol = tolFromAtr(wmAtr, wmCloseNearExtremeAtr, wmCloseNearExtremeTicks)
+wmStopBuf = tolFromAtr(wmAtr, wmStopOffsetAtr, wmStopOffsetTicks)
+wmTargetZoneBuffer = syminfo.mintick * wmTargetZoneBufferTicks
+
+wmBody = math.abs(close - open)
+wmBodyOk = wmBody >= wmAtr * wmMinBodyAtr
+wmBullCloseStrong = (high - close) <= wmCloseTol
+wmBearCloseStrong = (close - low) <= wmCloseTol
+wmLowerWick = math.min(open, close) - low
+wmUpperWick = high - math.max(open, close)
+wmBullWickOk = wmLowerWick >= wmBody * wmMinRejectionWickBody
+wmBearWickOk = wmUpperWick >= wmBody * wmMinRejectionWickBody
+wmBullCatalyst = wmBodyOk and wmBullCloseStrong and wmBullWickOk and (not wmRequireCandleColor or close > open)
+wmBearCatalyst = wmBodyOk and wmBearCloseStrong and wmBearWickOk and (not wmRequireCandleColor or close < open)
+
+[wmMacdLine, wmMacdSignal, wmMacdHist] = ta.macd(close, wmMacdFast, wmMacdSlow, wmMacdSignalLen)
+wmMacdLongOk = wmMacdLine > wmMacdSignal and wmMacdHist > 0
+wmMacdShortOk = wmMacdLine < wmMacdSignal and wmMacdHist < 0
+wmRsiValue = ta.rsi(close, wmRsiLen)
+wmRsiLongOk = wmRsiValue <= wmRsiLongMax
+wmRsiShortOk = wmRsiValue >= wmRsiShortMin
+
+wmCommonLongFilter = (not wmUseTrendFilter or sharedTrendLong) and (not wmUseSessionFilter or sharedInSession) and (not wmUseMacdFilter or wmMacdLongOk) and (not wmUseRsiFilter or wmRsiLongOk)
+wmCommonShortFilter = (not wmUseTrendFilter or sharedTrendShort) and (not wmUseSessionFilter or sharedInSession) and (not wmUseMacdFilter or wmMacdShortOk) and (not wmUseRsiFilter or wmRsiShortOk)
+
+var int wmFirstBar = na
+var float wmFirstLow = na
+var float wmFirstZone = na
+var int mmFirstBar = na
+var float mmFirstHigh = na
+var float mmFirstZone = na
+
+var int wmPendingDir = 0
+var float wmPendingEntry = na
+var float wmPendingStop = na
+var float wmPendingTarget = na
+var float wmPendingBE = na
+var int wmPendingBar = na
+
+wmBullFirstTouchEvent = false
+wmBearFirstTouchEvent = false
+wmBullSetupEvent = false
+wmBearSetupEvent = false
+wmBullAPlusSetupEvent = false
+wmBearAPlusSetupEvent = false
+wmSetupCanceledEvent = false
+wmBullEntryTrigger = false
+wmBearEntryTrigger = false
+
+int wmTrigDir = 0
+float wmTrigEntry = na
+float wmTrigStop = na
+float wmTrigTarget = na
+float wmTrigBE = na
+
+if barstate.isconfirmed and enableWammieMoolah
+    bullSignal = false
+    bearSignal = false
+    int bullBarsBetween = na
+    int bearBarsBetween = na
+    float bullFirstRef = na
+    float bearFirstRef = na
+
+    if wmPendingDir == 0
+        if not na(wmFirstBar) and bar_index - wmFirstBar > wmMaxBarsBetweenTouches
+            wmFirstBar := na
+            wmFirstLow := na
+            wmFirstZone := na
+        if not na(mmFirstBar) and bar_index - mmFirstBar > wmMaxBarsBetweenTouches
+            mmFirstBar := na
+            mmFirstHigh := na
+            mmFirstZone := na
+
+        if na(wmFirstBar)
+            zoneTouch = wmUseZoneFilter and wmTouchesSupport(wmSupportZone, wmZoneTol)
+            pivotTouch = not wmUseZoneFilter and not na(wmPLow)
+            firstExtremeOkZone = not wmRequireFirstTouchExtreme or (bar_index > wmExtremeLookback and low <= ta.lowest(low, wmExtremeLookback))
+            firstExtremeOkPivot = not wmRequireFirstTouchExtreme or (bar_index >= wmPivotLen + wmExtremeLookback and low[wmPivotLen] <= ta.lowest(low, wmExtremeLookback)[wmPivotLen])
+            if zoneTouch and firstExtremeOkZone
+                wmFirstBar := bar_index
+                wmFirstLow := low
+                wmFirstZone := wmSupportZone
+                wmBullFirstTouchEvent := true
+            else if pivotTouch and firstExtremeOkPivot and bar_index >= wmPivotLen
+                wmFirstBar := bar_index - wmPivotLen
+                wmFirstLow := low[wmPivotLen]
+                wmFirstZone := low[wmPivotLen]
+                wmBullFirstTouchEvent := true
+
+        if na(mmFirstBar)
+            zoneTouch = wmUseZoneFilter and wmTouchesResistance(wmResistanceZone, wmZoneTol)
+            pivotTouch = not wmUseZoneFilter and not na(wmPHigh)
+            firstExtremeOkZone = not wmRequireFirstTouchExtreme or (bar_index > wmExtremeLookback and high >= ta.highest(high, wmExtremeLookback))
+            firstExtremeOkPivot = not wmRequireFirstTouchExtreme or (bar_index >= wmPivotLen + wmExtremeLookback and high[wmPivotLen] >= ta.highest(high, wmExtremeLookback)[wmPivotLen])
+            if zoneTouch and firstExtremeOkZone
+                mmFirstBar := bar_index
+                mmFirstHigh := high
+                mmFirstZone := wmResistanceZone
+                wmBearFirstTouchEvent := true
+            else if pivotTouch and firstExtremeOkPivot and bar_index >= wmPivotLen
+                mmFirstBar := bar_index - wmPivotLen
+                mmFirstHigh := high[wmPivotLen]
+                mmFirstZone := high[wmPivotLen]
+                wmBearFirstTouchEvent := true
+
+        if not na(wmFirstBar)
+            bool secondTouchCandidate = false
+            float secondLow = na
+            int secondBar = na
+            if wmUseZoneFilter
+                secondTouchCandidate := wmTouchesSupport(wmFirstZone, wmZoneTol)
+                secondLow := low
+                secondBar := bar_index
+            else if not na(wmPLow) and bar_index >= wmPivotLen
+                secondTouchCandidate := true
+                secondLow := low[wmPivotLen]
+                secondBar := bar_index - wmPivotLen
+
+            if secondTouchCandidate and not na(secondBar) and secondBar > wmFirstBar
+                barsFromFirst = secondBar - wmFirstBar
+                if secondLow < wmFirstLow
+                    wmFirstBar := secondBar
+                    wmFirstLow := secondLow
+                    wmFirstZone := wmUseZoneFilter and not na(wmSupportZone) ? wmSupportZone : secondLow
+                    wmBullFirstTouchEvent := true
+                else if barsFromFirst >= wmMinBarsBetweenTouches and barsFromFirst <= wmMaxBarsBetweenTouches
+                    secondHigher = secondLow >= wmFirstLow + wmSecondTouchDeltaMin
+                    secondWithinMax = secondLow <= wmFirstLow + wmSecondTouchDeltaMax
+                    interimTouches = wmUseZoneFilter ? wmCountInterimTouches(barsFromFirst, wmFirstZone, wmZoneTol, true) : 0
+                    interimOk = wmUseZoneFilter ? interimTouches <= wmMaxInterimRetests : true
+                    maxHigh = wmUseZoneFilter ? wmMaxHighBetween(barsFromFirst) : na
+                    bounceOk = wmUseZoneFilter ? (not wmRequireBounceBetweenTouches or (not na(maxHigh) and maxHigh >= wmFirstZone + wmAtr * wmMinBounceAtr)) : true
+                    roomLeftOk = not wmUseRoomLeftFilter or (bar_index > wmRoomLeftBars and ta.lowest(low[1], wmRoomLeftBars) > wmFirstZone + (wmUseZoneFilter ? wmZoneTol : wmSecondTouchDeltaMin))
+                    filterOk = wmCommonLongFilter and roomLeftOk
+
+                    if secondHigher and secondWithinMax and interimOk and bounceOk and wmBullCatalyst and filterOk
+                        bullSignal := true
+                        bullBarsBetween := barsFromFirst
+                        bullFirstRef := wmFirstLow
+                        wmFirstBar := na
+                        wmFirstLow := na
+                        wmFirstZone := na
+                    else if not secondHigher or not secondWithinMax or not interimOk
+                        wmFirstBar := secondBar
+                        wmFirstLow := secondLow
+                        wmFirstZone := wmUseZoneFilter and not na(wmSupportZone) ? wmSupportZone : secondLow
+                        wmBullFirstTouchEvent := true
+
+        if not na(mmFirstBar)
+            bool secondTouchCandidate = false
+            float secondHigh = na
+            int secondBar = na
+            if wmUseZoneFilter
+                secondTouchCandidate := wmTouchesResistance(mmFirstZone, wmZoneTol)
+                secondHigh := high
+                secondBar := bar_index
+            else if not na(wmPHigh) and bar_index >= wmPivotLen
+                secondTouchCandidate := true
+                secondHigh := high[wmPivotLen]
+                secondBar := bar_index - wmPivotLen
+
+            if secondTouchCandidate and not na(secondBar) and secondBar > mmFirstBar
+                barsFromFirst = secondBar - mmFirstBar
+                if secondHigh > mmFirstHigh
+                    mmFirstBar := secondBar
+                    mmFirstHigh := secondHigh
+                    mmFirstZone := wmUseZoneFilter and not na(wmResistanceZone) ? wmResistanceZone : secondHigh
+                    wmBearFirstTouchEvent := true
+                else if barsFromFirst >= wmMinBarsBetweenTouches and barsFromFirst <= wmMaxBarsBetweenTouches
+                    secondLower = secondHigh <= mmFirstHigh - wmSecondTouchDeltaMin
+                    secondWithinMax = secondHigh >= mmFirstHigh - wmSecondTouchDeltaMax
+                    interimTouches = wmUseZoneFilter ? wmCountInterimTouches(barsFromFirst, mmFirstZone, wmZoneTol, false) : 0
+                    interimOk = wmUseZoneFilter ? interimTouches <= wmMaxInterimRetests : true
+                    minLow = wmUseZoneFilter ? wmMinLowBetween(barsFromFirst) : na
+                    bounceOk = wmUseZoneFilter ? (not wmRequireBounceBetweenTouches or (not na(minLow) and minLow <= mmFirstZone - wmAtr * wmMinBounceAtr)) : true
+                    roomLeftOk = not wmUseRoomLeftFilter or (bar_index > wmRoomLeftBars and ta.highest(high[1], wmRoomLeftBars) < mmFirstZone - (wmUseZoneFilter ? wmZoneTol : wmSecondTouchDeltaMin))
+                    filterOk = wmCommonShortFilter and roomLeftOk
+
+                    if secondLower and secondWithinMax and interimOk and bounceOk and wmBearCatalyst and filterOk
+                        bearSignal := true
+                        bearBarsBetween := barsFromFirst
+                        bearFirstRef := mmFirstHigh
+                        mmFirstBar := na
+                        mmFirstHigh := na
+                        mmFirstZone := na
+                    else if not secondLower or not secondWithinMax or not interimOk
+                        mmFirstBar := secondBar
+                        mmFirstHigh := secondHigh
+                        mmFirstZone := wmUseZoneFilter and not na(wmResistanceZone) ? wmResistanceZone : secondHigh
+                        wmBearFirstTouchEvent := true
+
+    if bullSignal and bearSignal
+        bullSignal := false
+        bearSignal := false
+
+    if wmPendingDir == 0
+        if bullSignal and not bearSignal
+            e = high + syminfo.mintick * wmEntryOffsetTicks
+            s = bullFirstRef - wmStopBuf
+            r = math.max(e - s, syminfo.mintick)
+            zoneT = not na(wmResistanceZone) and wmResistanceZone > e ? wmResistanceZone - wmTargetZoneBuffer : na
+            rrT = e + r * wmTargetRR
+            t = wmTargetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+            setupRR = (t - e) / r
+
+            if setupRR >= wmMinSetupRR
+                wmPendingDir := 1
+                wmPendingEntry := e
+                wmPendingStop := s
+                wmPendingTarget := t
+                wmPendingBE := e + r * wmBreakevenAtR
+                wmPendingBar := bar_index
+                wmBullSetupEvent := true
+                wmBullAPlusSetupEvent := bullBarsBetween >= wmIdealBarsBetweenTouches
+
+        else if bearSignal and not bullSignal
+            e = low - syminfo.mintick * wmEntryOffsetTicks
+            s = bearFirstRef + wmStopBuf
+            r = math.max(s - e, syminfo.mintick)
+            zoneT = not na(wmSupportZone) and wmSupportZone < e ? wmSupportZone + wmTargetZoneBuffer : na
+            rrT = e - r * wmTargetRR
+            t = wmTargetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+            setupRR = (e - t) / r
+
+            if setupRR >= wmMinSetupRR
+                wmPendingDir := -1
+                wmPendingEntry := e
+                wmPendingStop := s
+                wmPendingTarget := t
+                wmPendingBE := e - r * wmBreakevenAtR
+                wmPendingBar := bar_index
+                wmBearSetupEvent := true
+                wmBearAPlusSetupEvent := bearBarsBetween >= wmIdealBarsBetweenTouches
+
+    if wmPendingDir != 0
+        barsSinceSignal = bar_index - wmPendingBar
+        canTrigger = wmTriggerMode == "Next Candle (A+)" ? barsSinceSignal == 1 : barsSinceSignal >= 1
+        expired = wmTriggerMode == "Next Candle (A+)" ? barsSinceSignal > 1 : barsSinceSignal > wmEntryExpiryBars
+
+        invalidBeforeTrigger = canTrigger and (wmPendingDir == 1 ? low <= wmPendingStop : high >= wmPendingStop)
+        triggered = canTrigger and (wmPendingDir == 1 ? high >= wmPendingEntry : low <= wmPendingEntry)
+
+        if invalidBeforeTrigger
+            wmSetupCanceledEvent := true
+            wmPendingDir := 0
+            wmPendingEntry := na
+            wmPendingStop := na
+            wmPendingTarget := na
+            wmPendingBE := na
+            wmPendingBar := na
+        else if triggered
+            wmBullEntryTrigger := wmPendingDir == 1
+            wmBearEntryTrigger := wmPendingDir == -1
+            wmTrigDir := wmPendingDir
+            wmTrigEntry := wmPendingEntry
+            wmTrigStop := wmPendingStop
+            wmTrigTarget := wmPendingTarget
+            wmTrigBE := wmPendingBE
+
+            wmPendingDir := 0
+            wmPendingEntry := na
+            wmPendingStop := na
+            wmPendingTarget := na
+            wmPendingBE := na
+            wmPendingBar := na
+        else if expired
+            wmSetupCanceledEvent := true
+            wmPendingDir := 0
+            wmPendingEntry := na
+            wmPendingStop := na
+            wmPendingTarget := na
+            wmPendingBE := na
+            wmPendingBar := na
+
+// ============================================================================
+// 6) Strategy Entry Arbitration + Unified Trade Management
+// ============================================================================
+var bool tradeActive = false
+var int tradeDir = 0
+var float tradeEntryRef = na
+var float tradeStopRef = na
+var float tradeTargetRef = na
+var float tradeBERef = na
+var bool tradeMovedBE = false
+var string tradeSource = ""
+
+strategyEntryEvent = false
+strategyBEEvent = false
+strategyStopEvent = false
+strategyTargetEvent = false
+
+lkTriggered = enableLastKiss and (lkBullEntryTrigger or lkBearEntryTrigger)
+bsTriggered = enableBigShadow and (bsBullEntryTrigger or bsBearEntryTrigger)
+wmTriggered = enableWammieMoolah and (wmBullEntryTrigger or wmBearEntryTrigger)
+
+int chosenDir = 0
+float chosenEntry = na
+float chosenStop = na
+float chosenTarget = na
+float chosenBE = na
+string chosenSource = ""
+
+if not tradeActive and strategy.position_size == 0
+    if priorityMode == "Last Kiss > Big Shadow > Wammie/Moolah"
+        if lkTriggered
+            chosenDir := lkTrigDir
+            chosenEntry := lkTrigEntry
+            chosenStop := lkTrigStop
+            chosenTarget := lkTrigTarget
+            chosenBE := lkTrigBE
+            chosenSource := "Last Kiss"
+        else if bsTriggered
+            chosenDir := bsTrigDir
+            chosenEntry := bsTrigEntry
+            chosenStop := bsTrigStop
+            chosenTarget := bsTrigTarget
+            chosenBE := bsTrigBE
+            chosenSource := "Big Shadow"
+        else if wmTriggered
+            chosenDir := wmTrigDir
+            chosenEntry := wmTrigEntry
+            chosenStop := wmTrigStop
+            chosenTarget := wmTrigTarget
+            chosenBE := wmTrigBE
+            chosenSource := "Wammie/Moolah"
+    else if priorityMode == "Big Shadow > Last Kiss > Wammie/Moolah"
+        if bsTriggered
+            chosenDir := bsTrigDir
+            chosenEntry := bsTrigEntry
+            chosenStop := bsTrigStop
+            chosenTarget := bsTrigTarget
+            chosenBE := bsTrigBE
+            chosenSource := "Big Shadow"
+        else if lkTriggered
+            chosenDir := lkTrigDir
+            chosenEntry := lkTrigEntry
+            chosenStop := lkTrigStop
+            chosenTarget := lkTrigTarget
+            chosenBE := lkTrigBE
+            chosenSource := "Last Kiss"
+        else if wmTriggered
+            chosenDir := wmTrigDir
+            chosenEntry := wmTrigEntry
+            chosenStop := wmTrigStop
+            chosenTarget := wmTrigTarget
+            chosenBE := wmTrigBE
+            chosenSource := "Wammie/Moolah"
+    else
+        if wmTriggered
+            chosenDir := wmTrigDir
+            chosenEntry := wmTrigEntry
+            chosenStop := wmTrigStop
+            chosenTarget := wmTrigTarget
+            chosenBE := wmTrigBE
+            chosenSource := "Wammie/Moolah"
+        else if lkTriggered
+            chosenDir := lkTrigDir
+            chosenEntry := lkTrigEntry
+            chosenStop := lkTrigStop
+            chosenTarget := lkTrigTarget
+            chosenBE := lkTrigBE
+            chosenSource := "Last Kiss"
+        else if bsTriggered
+            chosenDir := bsTrigDir
+            chosenEntry := bsTrigEntry
+            chosenStop := bsTrigStop
+            chosenTarget := bsTrigTarget
+            chosenBE := bsTrigBE
+            chosenSource := "Big Shadow"
+
+if chosenDir != 0 and not na(chosenEntry) and not na(chosenStop) and not na(chosenTarget)
+    qty = calcQtyFromRisk(chosenEntry, chosenStop, riskPct)
+    if qty > 0
+        if chosenDir == 1
+            strategy.entry("LONG", strategy.long, qty=qty, comment=chosenSource)
+        else
+            strategy.entry("SHORT", strategy.short, qty=qty, comment=chosenSource)
+
+        tradeActive := true
+        tradeDir := chosenDir
+        tradeEntryRef := chosenEntry
+        tradeStopRef := chosenStop
+        tradeTargetRef := chosenTarget
+        tradeBERef := chosenBE
+        tradeMovedBE := false
+        tradeSource := chosenSource
+        strategyEntryEvent := true
+
+        // Flush pending states after selecting one entry source.
+        bsPendingDir := 0
+        bsPendingEntry := na
+        bsPendingStop := na
+        bsPendingTarget := na
+        bsPendingBE := na
+        bsPendingBar := na
+
+        wmPendingDir := 0
+        wmPendingEntry := na
+        wmPendingStop := na
+        wmPendingTarget := na
+        wmPendingBE := na
+        wmPendingBar := na
+
+        lkState := 0
+        lkBoxTop := na
+        lkBoxBottom := na
+        lkBreakoutBar := na
+        lkDirection := 0
+        lkFakeBreakouts := 0
+        lkEntryPrice := na
+        lkStopPrice := na
+        lkTargetPrice := na
+        lkSetupBar := na
+
+if tradeActive
+    liveStop = tradeMovedBE ? tradeEntryRef : tradeStopRef
+    if enableGlobalBreakeven and not tradeMovedBE
+        beHit = tradeDir == 1 ? high >= tradeBERef : low <= tradeBERef
+        if beHit
+            tradeMovedBE := true
+            strategyBEEvent := true
+            liveStop := tradeEntryRef
+
+    if tradeDir == 1
+        strategy.exit("LONG EXIT", from_entry="LONG", stop=liveStop, limit=tradeTargetRef, comment=tradeSource)
+    else
+        strategy.exit("SHORT EXIT", from_entry="SHORT", stop=liveStop, limit=tradeTargetRef, comment=tradeSource)
+
+    // Classify closure event conservatively if both touched.
+    justClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
+    if justClosed
+        stopTouched = tradeDir == 1 ? low <= liveStop : high >= liveStop
+        targetTouched = tradeDir == 1 ? high >= tradeTargetRef : low <= tradeTargetRef
+        if stopTouched
+            strategyStopEvent := true
+        else if targetTouched
+            strategyTargetEvent := true
+
+        tradeActive := false
+        tradeDir := 0
+        tradeEntryRef := na
+        tradeStopRef := na
+        tradeTargetRef := na
+        tradeBERef := na
+        tradeMovedBE := false
+        tradeSource := ""
+
+// ============================================================================
+// 7) Plots + Alerts
+// ============================================================================
+plot(showLevels and tradeActive ? tradeEntryRef : na, "Active Entry", color=color.new(color.blue, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels and tradeActive ? (tradeMovedBE ? tradeEntryRef : tradeStopRef) : na, "Active Stop", color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels and tradeActive ? tradeTargetRef : na, "Active Target", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+
+anySessionFilter = (enableLastKiss and lkEffUseSessionFilter) or (enableBigShadow and bsEffUseSessionFilter) or (enableWammieMoolah and wmUseSessionFilter)
+bgcolor(showSessionBg and anySessionFilter and sharedInSession ? color.new(color.teal, 90) : na, title="Session Background")
+
+plotshape(showMarkers and lkBullSetupEvent, title="LK Bull Setup", style=shape.labelup, location=location.belowbar, color=color.new(color.blue, 0), text="LK BUY", textcolor=color.white, size=size.tiny)
+plotshape(showMarkers and lkBearSetupEvent, title="LK Bear Setup", style=shape.labeldown, location=location.abovebar, color=color.new(color.blue, 0), text="LK SELL", textcolor=color.white, size=size.tiny)
+plotshape(showMarkers and bsBullSetupEvent, title="BS Bull Setup", style=shape.labelup, location=location.belowbar, color=color.new(color.navy, 0), text="BS BUY", textcolor=color.white, size=size.tiny)
+plotshape(showMarkers and bsBearSetupEvent, title="BS Bear Setup", style=shape.labeldown, location=location.abovebar, color=color.new(color.navy, 0), text="BS SELL", textcolor=color.white, size=size.tiny)
+plotshape(showMarkers and wmBullSetupEvent, title="WM Bull Setup", style=shape.labelup, location=location.belowbar, color=color.new(color.purple, 0), text="W BUY", textcolor=color.white, size=size.tiny)
+plotshape(showMarkers and wmBearSetupEvent, title="WM Bear Setup", style=shape.labeldown, location=location.abovebar, color=color.new(color.purple, 0), text="M SELL", textcolor=color.white, size=size.tiny)
+
+plotshape(showMarkers and strategyEntryEvent and tradeDir == 1, title="Strategy Long Entry", style=shape.arrowup, location=location.belowbar, color=color.new(color.green, 0), text="ENTRY", size=size.tiny)
+plotshape(showMarkers and strategyEntryEvent and tradeDir == -1, title="Strategy Short Entry", style=shape.arrowdown, location=location.abovebar, color=color.new(color.red, 0), text="ENTRY", size=size.tiny)
+plotshape(showMarkers and strategyBEEvent ? tradeEntryRef : na, title="Move to BE", style=shape.circle, location=location.absolute, color=color.new(color.yellow, 0), text="BE", size=size.tiny)
+plotshape(showMarkers and strategyTargetEvent, title="Target Hit", style=shape.triangleup, location=location.abovebar, color=color.new(color.green, 0), text="TP", size=size.tiny)
+plotshape(showMarkers and strategyStopEvent, title="Stop Hit", style=shape.triangledown, location=location.belowbar, color=color.new(color.red, 0), text="SL", size=size.tiny)
+plotshape(showMarkers and (lkSetupCanceledEvent or bsSetupCanceledEvent or wmSetupCanceledEvent), title="Setup Canceled", style=shape.xcross, location=location.top, color=color.new(color.gray, 0), text="CXL", size=size.tiny)
+
+alertcondition(lkBullSetupEvent, "Last Kiss Bull Setup", "Last Kiss bullish setup is ready.")
+alertcondition(lkBearSetupEvent, "Last Kiss Bear Setup", "Last Kiss bearish setup is ready.")
+alertcondition(bsBullSetupEvent, "Big Shadow Bull Setup", "Big Shadow bullish setup is ready.")
+alertcondition(bsBearSetupEvent, "Big Shadow Bear Setup", "Big Shadow bearish setup is ready.")
+alertcondition(wmBullSetupEvent, "Wammie Setup", "Wammie bullish setup is ready.")
+alertcondition(wmBearSetupEvent, "Moolah Setup", "Moolah bearish setup is ready.")
+
+alertcondition(strategyEntryEvent, "Strategy Entry", "Unified strategy entered a new trade.")
+alertcondition(strategyBEEvent, "Move to Breakeven", "Unified strategy moved stop to breakeven.")
+alertcondition(strategyTargetEvent, "Target Hit", "Unified strategy target reached.")
+alertcondition(strategyStopEvent, "Stop Hit", "Unified strategy stop reached.")
+alertcondition(lkSetupCanceledEvent or bsSetupCanceledEvent or wmSetupCanceledEvent, "Setup Canceled", "One of the setup engines canceled a pending setup.")

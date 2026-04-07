@@ -1,0 +1,42 @@
+Deals:,,,,,,,,,,,,
+Open Time,Ticket,Type,Size,Item,Price,Order,Comment,,Entry,Commission,Swap,Profit
+2025.10.01 09:46:24,18190246,buy,0.05,EURUSD,1.17687,80473649,,,in,0,0,0
+2025.10.01 09:47:11,18190264,buy,0.05,GBPUSD,1.34751,80473667,,,in,0,0,0
+2025.10.01 13:20:02,18193236,sell,0.05,EURUSD,1.17236,80476741,[sl 1.17236],,out,0,0,-19.23
+2025.10.01 14:06:54,18193763,buy,0.05,EURUSD,1.17289,80477275,,,in,0,0,0
+2025.10.01 14:56:59,18194344,sell,0.05,GBPUSD,1.34825,80477878,,,out,0,0,3.15
+2025.10.01 14:57:10,18194347,sell,0.05,EURUSD,1.17348,80477881,,,out,0,0,2.51
+2025.10.01 17:46:20,18197815,buy,0.05,EURUSD,1.17565,80481420,,,in,0,0,0
+2025.10.02 10:06:07,18201889,buy,0.05,GBPUSD,1.34968,80485600,,,in,0,0,0
+2025.10.02 16:50:15,18204695,sell,0.05,GBPUSD,1.34288,80488492,[sl 1.34289],,out,0,0,-29.01
+2025.10.02 17:12:12,18205170,sell,0.05,EURUSD,1.17121,80488967,,,out,0,-1.32,-18.95
+2025.10.02 17:12:15,18205171,buy,0.05,EURUSD,1.17116,80488968,,,out,0,9.51,-74.71
+,,,,,,,,,,0,8.19,-136.24
+,,,,,,,,,,Closed P/L:,,-128.05
+,,,,,,,,,,Deposit/Withdrawal:,,0
+,,,,,,,,,,Credit Facility:,,0
+,,,,,,,,,,Round Commission:,,0
+,,,,,,,,,,Instant Commission:,,0
+,,,,,,,,,,Additional Operations:,,0
+,,,,,,,,,,Total:,,-128.05
+,,,,,,,,,,,,
+Positions:,,,,,,,,,,,,
+Open Time,Ticket,Type,Size,Item,Price,S / L,T / P,Market Price,,Swap,Profit,
+No transactions,,,,,,,,,,,,
+,,,,,,,,,,0,,0
+,,,,,,,,,,Floating P/L:,,0
+Working Orders:,,,,,,,,,,,,
+Open Time,Ticket,Type,Size,Item,Price,S / L,T / P,Market Price,,Comment,,
+No transactions,,,,,,,,,,,,
+,,,,,,,,,,,,
+A/C Summary:,,,,,,,,,,,,
+Closed Trade P/L:,,,-128.05,,,,Previous Ledger Balance:,,,515.55,,
+Deposit/Withdrawal:,,,0,,,,Previous Equity:,,,440.32,,
+Total Credit Facility:,,,0,,,,Balance:,,,387.5,,
+Round Commission:,,,0,,,,Equity:,,,387.5,,
+Instant Commission:,,,0,,,,Floating P/L:,,,0,,
+Additional Operations:,,,0,,,,Margin Requirements:,,,0,,
+Total:,,,-128.05,,,,Available Margin:,,,387.5,,
+,,,,,,,,,,,,
+"Best Regards
+Accounts Department",,,,,,,,,,,,

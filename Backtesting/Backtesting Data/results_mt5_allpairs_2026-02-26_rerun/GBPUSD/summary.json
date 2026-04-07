@@ -1,0 +1,55 @@
+{
+  "source_csv": "Backtesting Data/GBPUSD_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 1e-05,
+  "disable_trend_filter": false,
+  "disable_session_filter": false,
+  "big_shadow_profile": "Balanced",
+  "big_shadow_pair_preset_mode": "MT5 Per-Pair >=2R (2020-2026)",
+  "results": [
+    {
+      "indicator": "Last Kiss",
+      "setups": 60,
+      "entries": 51,
+      "canceled_setups": 614,
+      "closed_trades": 42,
+      "wins": 14,
+      "losses": 28,
+      "breakeven": 0,
+      "win_rate_pct": 33.33,
+      "net_r": 0.0,
+      "avg_r": 0.0,
+      "max_drawdown_r": 5.0
+    },
+    {
+      "indicator": "Big Shadow",
+      "setups": 637,
+      "entries": 539,
+      "canceled_setups": 98,
+      "closed_trades": 539,
+      "wins": 154,
+      "losses": 293,
+      "breakeven": 92,
+      "win_rate_pct": 28.57,
+      "net_r": 15.0,
+      "avg_r": 0.028,
+      "max_drawdown_r": 39.0
+    },
+    {
+      "indicator": "Wammie/Moolah",
+      "setups": 13,
+      "entries": 13,
+      "canceled_setups": 0,
+      "closed_trades": 13,
+      "wins": 4,
+      "losses": 3,
+      "breakeven": 6,
+      "win_rate_pct": 30.77,
+      "net_r": 5.0,
+      "avg_r": 0.385,
+      "max_drawdown_r": 1.0
+    }
+  ]
+}

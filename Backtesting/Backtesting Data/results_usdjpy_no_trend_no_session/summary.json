@@ -1,0 +1,53 @@
+{
+  "source_csv": "Backtesting Data/FX_USDJPY, 60.csv",
+  "bars": 2740,
+  "start": "2025-07-28T04:00:00+00:00",
+  "end": "2026-01-07T05:00:00+00:00",
+  "mintick": 0.001,
+  "disable_trend_filter": true,
+  "disable_session_filter": true,
+  "results": [
+    {
+      "indicator": "Last Kiss",
+      "setups": 18,
+      "entries": 18,
+      "canceled_setups": 18,
+      "closed_trades": 11,
+      "wins": 4,
+      "losses": 7,
+      "breakeven": 0,
+      "win_rate_pct": 36.36,
+      "net_r": -0.46,
+      "avg_r": -0.041,
+      "max_drawdown_r": 4.0
+    },
+    {
+      "indicator": "Big Shadow",
+      "setups": 1,
+      "entries": 1,
+      "canceled_setups": 0,
+      "closed_trades": 1,
+      "wins": 0,
+      "losses": 1,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "net_r": -1.0,
+      "avg_r": -1.0,
+      "max_drawdown_r": 1.0
+    },
+    {
+      "indicator": "Wammie/Moolah",
+      "setups": 0,
+      "entries": 0,
+      "canceled_setups": 0,
+      "closed_trades": 0,
+      "wins": 0,
+      "losses": 0,
+      "breakeven": 0,
+      "win_rate_pct": 0.0,
+      "net_r": 0,
+      "avg_r": 0.0,
+      "max_drawdown_r": 0.0
+    }
+  ]
+}

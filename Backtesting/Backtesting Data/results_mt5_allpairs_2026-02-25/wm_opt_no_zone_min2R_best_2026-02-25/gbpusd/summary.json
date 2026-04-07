@@ -1,0 +1,42 @@
+{
+  "source_csv": "Backtesting Data/GBPUSD_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 1e-05,
+  "indicator": "Wammie/Moolah",
+  "scenario_id": "wm_opt_no_zone_min2R_best_2026-02-25",
+  "disable_trend_filter": true,
+  "disable_session_filter": true,
+  "overrides": {
+    "useZoneFilter": false,
+    "targetMode": "R Multiple",
+    "targetRR": 2.5,
+    "minBarsBetweenTouches": 4,
+    "maxBarsBetweenTouches": 80,
+    "requireFirstTouchExtreme": true,
+    "requireBounceBetweenTouches": false,
+    "useRoomLeftFilter": false,
+    "minBodyAtr": 0.08,
+    "requireCandleColor": false,
+    "minRejectionWickBody": 0.1,
+    "minSecondTouchTicks": 0,
+    "minSecondTouchAtr": 0.0,
+    "maxSecondTouchTicks": 30,
+    "maxSecondTouchAtr": 0.3
+  },
+  "result": {
+    "indicator": "Wammie/Moolah",
+    "setups": 59,
+    "entries": 56,
+    "canceled_setups": 3,
+    "closed_trades": 56,
+    "wins": 14,
+    "losses": 26,
+    "breakeven": 16,
+    "win_rate_pct": 25.0,
+    "net_r": 9.0,
+    "avg_r": 0.161,
+    "max_drawdown_r": 6.5
+  }
+}

@@ -1,0 +1,30 @@
+//@version=6
+indicator("QQE ADV V2")
+
+RSIPeriod = 8
+SF = 1
+WP = input.float(3.0, "WP", step=0.01)
+WildersPeriod = RSIPeriod * 2 - 1
+
+rsiValue = ta.rsi(close, RSIPeriod)
+RsiMa = ta.ema(rsiValue, SF)
+plot(RsiMa, color=color.blue, title="Smoothed RSI")
+
+AtrRsi = math.abs(RsiMa[1] - RsiMa)
+MaAtrRsi = ta.ema(AtrRsi, WildersPeriod)
+dar = ta.ema(MaAtrRsi, WildersPeriod) * WP
+
+newShortBand = RsiMa + dar
+float rsi0 = 0.0
+rsi0 := RsiMa[1] < rsi0[1] and RsiMa < rsi0[1] ? math.min(rsi0[1], newShortBand) : newShortBand
+
+newLongBand = RsiMa - dar
+float rsi1 = 0.0
+rsi1 := RsiMa[1] > rsi1[1] and RsiMa > rsi1[1] ? math.max(rsi1[1], newLongBand) : newLongBand
+
+float trend = 0.0
+trend := ta.cross(RsiMa, rsi0[1]) ? 1.0 : ta.cross(RsiMa, rsi1[1]) ? -1.0 : nz(trend[1], 1.0)
+
+secondRSILine = trend == 1.0 ? rsi1 : rsi0
+
+plot(secondRSILine, color=color.orange, linewidth=2, title="QQE Band")

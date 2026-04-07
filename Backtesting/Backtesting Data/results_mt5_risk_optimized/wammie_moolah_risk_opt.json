@@ -1,0 +1,627 @@
+{
+  "indicator": "Wammie/Moolah",
+  "data_files": [
+    "EURUSD_H1_2020-2026-02-23.csv",
+    "GBPUSD_H1_2020-2026-02-23.csv",
+    "USDCAD_H1_2020-2026-02-23.csv",
+    "USDJPY_H1_2020-2026-02-23.csv"
+  ],
+  "ranking_logic": "feasible: max_drawdown<=10 and total_return>=0, ranked by executed_trades desc then fewer hard stops then return",
+  "ranked_results": [
+    {
+      "scenario_id": "wm_no_trend_no_session",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {},
+      "raw_entries": 2,
+      "raw_setups": 2,
+      "raw_net_r": 0.56,
+      "risk_adjusted": {
+        "executed_trades": 2,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.56,
+        "ending_equity": 100.56
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 1,
+          "setups": 1,
+          "net_r": 0.56
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 1,
+          "setups": 1,
+          "net_r": 0.0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_no_trend",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": false,
+      "overrides": {},
+      "raw_entries": 1,
+      "raw_setups": 1,
+      "raw_net_r": 0.56,
+      "risk_adjusted": {
+        "executed_trades": 1,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.56,
+        "ending_equity": 100.56
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 1,
+          "setups": 1,
+          "net_r": 0.56
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_strict",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": false,
+      "disable_session_filter": false,
+      "overrides": {},
+      "raw_entries": 0,
+      "raw_setups": 0,
+      "raw_net_r": 0.0,
+      "risk_adjusted": {
+        "executed_trades": 0,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.0,
+        "ending_equity": 100.0
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_relaxed_c",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 3,
+        "minBarsBetweenTouches": 4,
+        "useZoneFilter": false
+      },
+      "raw_entries": 0,
+      "raw_setups": 0,
+      "raw_net_r": 0.0,
+      "risk_adjusted": {
+        "executed_trades": 0,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.0,
+        "ending_equity": 100.0
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_relaxed_d",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 3,
+        "minBarsBetweenTouches": 3,
+        "useZoneFilter": false,
+        "minBodyAtr": 0.1,
+        "minSecondTouchTicks": 1,
+        "minSecondTouchAtr": 0.0,
+        "requireCandleColor": false
+      },
+      "raw_entries": 0,
+      "raw_setups": 0,
+      "raw_net_r": 0.0,
+      "risk_adjusted": {
+        "executed_trades": 0,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.0,
+        "ending_equity": 100.0
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    }
+  ],
+  "all_results": [
+    {
+      "scenario_id": "wm_strict",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": false,
+      "disable_session_filter": false,
+      "overrides": {},
+      "raw_entries": 0,
+      "raw_setups": 0,
+      "raw_net_r": 0.0,
+      "risk_adjusted": {
+        "executed_trades": 0,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.0,
+        "ending_equity": 100.0
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_no_trend",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": false,
+      "overrides": {},
+      "raw_entries": 1,
+      "raw_setups": 1,
+      "raw_net_r": 0.56,
+      "risk_adjusted": {
+        "executed_trades": 1,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.56,
+        "ending_equity": 100.56
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 1,
+          "setups": 1,
+          "net_r": 0.56
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_no_trend_no_session",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {},
+      "raw_entries": 2,
+      "raw_setups": 2,
+      "raw_net_r": 0.56,
+      "risk_adjusted": {
+        "executed_trades": 2,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.56,
+        "ending_equity": 100.56
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 1,
+          "setups": 1,
+          "net_r": 0.56
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 1,
+          "setups": 1,
+          "net_r": 0.0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_relaxed_a",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 2,
+        "minBarsBetweenTouches": 4
+      },
+      "raw_entries": 62,
+      "raw_setups": 71,
+      "raw_net_r": -12.68,
+      "risk_adjusted": {
+        "executed_trades": 59,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 3,
+        "hard_stops": 11,
+        "capital_preservation_activations": 2,
+        "max_drawdown_pct": 10.49,
+        "total_return_pct": -7.76,
+        "ending_equity": 92.24
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 17,
+          "setups": 19,
+          "net_r": -5.54
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 14,
+          "setups": 18,
+          "net_r": -0.47
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 18,
+          "setups": 19,
+          "net_r": -3.69
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 13,
+          "setups": 15,
+          "net_r": -2.98
+        }
+      ],
+      "feasible": false
+    },
+    {
+      "scenario_id": "wm_relaxed_b",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 2,
+        "minBarsBetweenTouches": 4,
+        "minBodyAtr": 0.12
+      },
+      "raw_entries": 69,
+      "raw_setups": 79,
+      "raw_net_r": -14.05,
+      "risk_adjusted": {
+        "executed_trades": 66,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 3,
+        "hard_stops": 13,
+        "capital_preservation_activations": 2,
+        "max_drawdown_pct": 11.05,
+        "total_return_pct": -8.34,
+        "ending_equity": 91.66
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 22,
+          "setups": 24,
+          "net_r": -6.54
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 15,
+          "setups": 19,
+          "net_r": -1.46
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 19,
+          "setups": 21,
+          "net_r": -3.07
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 13,
+          "setups": 15,
+          "net_r": -2.98
+        }
+      ],
+      "feasible": false
+    },
+    {
+      "scenario_id": "wm_relaxed_c",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 3,
+        "minBarsBetweenTouches": 4,
+        "useZoneFilter": false
+      },
+      "raw_entries": 0,
+      "raw_setups": 0,
+      "raw_net_r": 0.0,
+      "risk_adjusted": {
+        "executed_trades": 0,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.0,
+        "ending_equity": 100.0
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    },
+    {
+      "scenario_id": "wm_relaxed_d",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 3,
+        "minBarsBetweenTouches": 3,
+        "useZoneFilter": false,
+        "minBodyAtr": 0.1,
+        "minSecondTouchTicks": 1,
+        "minSecondTouchAtr": 0.0,
+        "requireCandleColor": false
+      },
+      "raw_entries": 0,
+      "raw_setups": 0,
+      "raw_net_r": 0.0,
+      "risk_adjusted": {
+        "executed_trades": 0,
+        "skipped_by_pause": 0,
+        "skipped_by_frequency": 0,
+        "hard_stops": 0,
+        "capital_preservation_activations": 0,
+        "max_drawdown_pct": 0.0,
+        "total_return_pct": 0.0,
+        "ending_equity": 100.0
+      },
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "net_r": 0
+        }
+      ],
+      "feasible": true
+    }
+  ]
+}

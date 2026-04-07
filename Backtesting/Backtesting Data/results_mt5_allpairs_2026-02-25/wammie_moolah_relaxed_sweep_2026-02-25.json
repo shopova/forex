@@ -1,0 +1,271 @@
+{
+  "indicator": "Wammie/Moolah",
+  "data_files": [
+    "EURUSD_H1_2020-2026-02-23.csv",
+    "GBPUSD_H1_2020-2026-02-23.csv",
+    "USDCAD_H1_2020-2026-02-23.csv",
+    "USDJPY_H1_2020-2026-02-23.csv"
+  ],
+  "ranked_results": [
+    {
+      "scenario_id": "wm_relaxed_s4_zone_on_but_wide_touch",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 3,
+        "minBarsBetweenTouches": 4,
+        "useZoneFilter": true,
+        "minBodyAtr": 0.1,
+        "requireCandleColor": false,
+        "maxSecondTouchTicks": 120,
+        "maxSecondTouchAtr": 1.2
+      },
+      "total_entries": 64,
+      "total_setups": 73,
+      "total_closed_trades": 64,
+      "total_net_r": -15.21,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 17,
+          "setups": 19,
+          "closed_trades": 17,
+          "win_rate_pct": 23.53,
+          "net_r": -4.81,
+          "avg_r": -0.283,
+          "max_drawdown_r": 6.72
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 13,
+          "setups": 17,
+          "closed_trades": 13,
+          "win_rate_pct": 38.46,
+          "net_r": -1.31,
+          "avg_r": -0.101,
+          "max_drawdown_r": 2.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 18,
+          "setups": 20,
+          "closed_trades": 18,
+          "win_rate_pct": 22.22,
+          "net_r": -4.11,
+          "avg_r": -0.228,
+          "max_drawdown_r": 4.35
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 16,
+          "setups": 17,
+          "closed_trades": 16,
+          "win_rate_pct": 37.5,
+          "net_r": -4.98,
+          "avg_r": -0.311,
+          "max_drawdown_r": 4.98
+        }
+      ]
+    },
+    {
+      "scenario_id": "wm_relaxed_s1_moderate",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 2,
+        "minBarsBetweenTouches": 4,
+        "maxSecondTouchTicks": 80,
+        "maxSecondTouchAtr": 0.8
+      },
+      "total_entries": 49,
+      "total_setups": 57,
+      "total_closed_trades": 49,
+      "total_net_r": -7.91,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 12,
+          "setups": 14,
+          "closed_trades": 12,
+          "win_rate_pct": 33.33,
+          "net_r": -2.83,
+          "avg_r": -0.236,
+          "max_drawdown_r": 4.73
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 10,
+          "setups": 14,
+          "closed_trades": 10,
+          "win_rate_pct": 40.0,
+          "net_r": -0.35,
+          "avg_r": -0.035,
+          "max_drawdown_r": 2.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 13,
+          "setups": 14,
+          "closed_trades": 13,
+          "win_rate_pct": 15.38,
+          "net_r": -0.75,
+          "avg_r": -0.058,
+          "max_drawdown_r": 2.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 14,
+          "setups": 15,
+          "closed_trades": 14,
+          "win_rate_pct": 42.86,
+          "net_r": -3.98,
+          "avg_r": -0.284,
+          "max_drawdown_r": 3.98
+        }
+      ]
+    },
+    {
+      "scenario_id": "wm_relaxed_s2_loose_zone",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 3,
+        "minBarsBetweenTouches": 3,
+        "useZoneFilter": false,
+        "minBodyAtr": 0.1,
+        "minSecondTouchTicks": 1,
+        "minSecondTouchAtr": 0.0,
+        "maxSecondTouchTicks": 120,
+        "maxSecondTouchAtr": 1.2,
+        "requireCandleColor": false
+      },
+      "total_entries": 0,
+      "total_setups": 0,
+      "total_closed_trades": 0,
+      "total_net_r": 0.0,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        }
+      ]
+    },
+    {
+      "scenario_id": "wm_relaxed_s3_very_loose",
+      "indicator": "Wammie/Moolah",
+      "disable_trend_filter": true,
+      "disable_session_filter": true,
+      "overrides": {
+        "requireFirstTouchExtreme": false,
+        "requireBounceBetweenTouches": false,
+        "useRoomLeftFilter": false,
+        "maxInterimRetests": 4,
+        "minBarsBetweenTouches": 3,
+        "useZoneFilter": false,
+        "minBodyAtr": 0.08,
+        "minSecondTouchTicks": 0,
+        "minSecondTouchAtr": 0.0,
+        "maxSecondTouchTicks": 180,
+        "maxSecondTouchAtr": 1.8,
+        "requireCandleColor": false,
+        "minRejectionWickBody": 0.1,
+        "closeNearExtremeTicks": 20,
+        "closeNearExtremeAtr": 0.1
+      },
+      "total_entries": 0,
+      "total_setups": 0,
+      "total_closed_trades": 0,
+      "total_net_r": 0.0,
+      "per_pair": [
+        {
+          "pair_file": "EURUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "GBPUSD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDCAD_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        },
+        {
+          "pair_file": "USDJPY_H1_2020-2026-02-23.csv",
+          "entries": 0,
+          "setups": 0,
+          "closed_trades": 0,
+          "win_rate_pct": 0.0,
+          "net_r": 0,
+          "avg_r": 0.0,
+          "max_drawdown_r": 0.0
+        }
+      ]
+    }
+  ]
+}

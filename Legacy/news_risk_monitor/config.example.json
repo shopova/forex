@@ -1,0 +1,344 @@
+{
+  "timezone": "Europe/Sofia",
+  "allowed_pairs": [
+    "EURUSD",
+    "USDJPY",
+    "GBPUSD"
+  ],
+  "currency_to_pairs": {
+    "USD": [
+      "EURUSD",
+      "USDJPY",
+      "GBPUSD"
+    ],
+    "EUR": [
+      "EURUSD"
+    ],
+    "JPY": [
+      "USDJPY"
+    ],
+    "GBP": [
+      "GBPUSD"
+    ]
+  },
+  "forex_factory_url": "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+  "forex_factory_currencies": [
+    "USD",
+    "EUR",
+    "GBP",
+    "JPY"
+  ],
+  "scheduled_windows": {
+    "High": {
+      "lookahead_minutes": 90,
+      "cooldown_minutes": 60,
+      "severity": "RED"
+    },
+    "Medium": {
+      "lookahead_minutes": 30,
+      "cooldown_minutes": 30,
+      "severity": "AMBER"
+    },
+    "Low": {
+      "lookahead_minutes": 0,
+      "cooldown_minutes": 0,
+      "severity": "GREEN"
+    }
+  },
+  "headline_feeds": [
+    {
+      "name": "Iran and Hormuz",
+      "url": "https://news.google.com/rss/search?q=(Iran%20OR%20Hormuz%20OR%20%22Strait%20of%20Hormuz%22)%20(oil%20OR%20tanker%20OR%20shipping%20OR%20strike%20OR%20missile%20OR%20sanctions%20OR%20energy)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "severity": "RED",
+      "cooldown_minutes": 60,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com",
+        "nbcnews.com",
+        "abc.net.au",
+        "aljazeera.com"
+      ],
+      "keywords_any": [
+        "hormuz",
+        "strait of hormuz",
+        "missile",
+        "sanctions",
+        "oil",
+        "tanker",
+        "shipping",
+        "energy",
+        "strike",
+        "attack"
+      ]
+    },
+    {
+      "name": "Trump policy headlines",
+      "url": "https://news.google.com/rss/search?q=(Trump%20OR%20%22Truth%20Social%22)%20(tariff%20OR%20sanctions%20OR%20%22executive%20order%22%20OR%20Iran%20OR%20Hormuz%20OR%20trade)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "severity": "RED",
+      "cooldown_minutes": 45,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com",
+        "abc.net.au",
+        "nbcnews.com"
+      ],
+      "keywords_any": [
+        "trump",
+        "truth social",
+        "tariff",
+        "sanctions",
+        "executive order",
+        "trade",
+        "hormuz",
+        "iran"
+      ]
+    },
+    {
+      "name": "Ukraine escalation",
+      "url": "https://news.google.com/rss/search?q=(Ukraine%20OR%20Russia)%20(missile%20OR%20strike%20OR%20sanctions%20OR%20ceasefire%20OR%20Black%20Sea%20OR%20energy)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "severity": "AMBER",
+      "cooldown_minutes": 45,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com",
+        "aljazeera.com"
+      ],
+      "keywords_any": [
+        "ukraine",
+        "russia",
+        "black sea",
+        "sanctions",
+        "ceasefire",
+        "missile",
+        "strike",
+        "energy"
+      ]
+    },
+    {
+      "name": "Central bank and intervention risk",
+      "url": "https://news.google.com/rss/search?q=(Fed%20OR%20FOMC%20OR%20ECB%20OR%20BOE%20OR%20BOJ%20OR%20%22Bank%20of%20Japan%22%20OR%20%22Bank%20of%20England%22%20OR%20%22European%20Central%20Bank%22)%20(intervention%20OR%20emergency%20OR%20surprise%20OR%20speech%20OR%20rate%20OR%20liquidity)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "severity": "RED",
+      "cooldown_minutes": 60,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com"
+      ],
+      "keywords_any": [
+        "fed",
+        "fomc",
+        "ecb",
+        "boe",
+        "boj",
+        "intervention",
+        "emergency",
+        "surprise",
+        "speech",
+        "liquidity",
+        "rate"
+      ]
+    },
+    {
+      "name": "Oil and OPEC shock",
+      "url": "https://news.google.com/rss/search?q=(OPEC%20OR%20oil%20OR%20crude%20OR%20shipping%20OR%20tankers)%20(cut%20OR%20supply%20OR%20surge%20OR%20shock%20OR%20disruption)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "severity": "AMBER",
+      "cooldown_minutes": 45,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com"
+      ],
+      "keywords_any": [
+        "opec",
+        "oil",
+        "crude",
+        "shipping",
+        "tanker",
+        "supply",
+        "disruption",
+        "shock"
+      ]
+    },
+    {
+      "name": "China Taiwan Asia risk",
+      "url": "https://news.google.com/rss/search?q=(China%20OR%20Taiwan%20OR%20PBOC%20OR%20yuan)%20(military%20OR%20drill%20OR%20tariff%20OR%20stimulus%20OR%20devaluation%20OR%20intervention)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "USDJPY"
+      ],
+      "severity": "AMBER",
+      "cooldown_minutes": 45,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com"
+      ],
+      "keywords_any": [
+        "china",
+        "taiwan",
+        "pboc",
+        "yuan",
+        "military",
+        "drill",
+        "stimulus",
+        "devaluation",
+        "intervention"
+      ]
+    },
+    {
+      "name": "EU political and sovereign stress",
+      "url": "https://news.google.com/rss/search?q=(EU%20OR%20eurozone%20OR%20France%20OR%20Germany%20OR%20Italy)%20(election%20OR%20budget%20OR%20coalition%20OR%20debt%20OR%20bond%20OR%20spread)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD"
+      ],
+      "severity": "AMBER",
+      "cooldown_minutes": 45,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com"
+      ],
+      "keywords_any": [
+        "eu",
+        "eurozone",
+        "france",
+        "germany",
+        "italy",
+        "election",
+        "budget",
+        "coalition",
+        "debt",
+        "bond",
+        "spread"
+      ]
+    },
+    {
+      "name": "UK political and gilt stress",
+      "url": "https://news.google.com/rss/search?q=(UK%20OR%20Britain%20OR%20gilt%20OR%20sterling)%20(budget%20OR%20election%20OR%20fiscal%20OR%20bond%20OR%20crisis%20OR%20BOE)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "GBPUSD"
+      ],
+      "severity": "AMBER",
+      "cooldown_minutes": 45,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com"
+      ],
+      "keywords_any": [
+        "uk",
+        "britain",
+        "gilt",
+        "sterling",
+        "budget",
+        "election",
+        "fiscal",
+        "bond",
+        "crisis",
+        "boe"
+      ]
+    },
+    {
+      "name": "Banking and liquidity stress",
+      "url": "https://news.google.com/rss/search?q=(bank%20OR%20banking%20OR%20liquidity%20OR%20credit%20OR%20funding)%20(stress%20OR%20crisis%20OR%20failure%20OR%20rescue%20OR%20emergency)%20when:1d&hl=en-US&gl=US&ceid=US:en",
+      "pairs": [
+        "EURUSD",
+        "USDJPY",
+        "GBPUSD"
+      ],
+      "severity": "RED",
+      "cooldown_minutes": 60,
+      "max_age_hours": 24,
+      "max_items": 3,
+      "trusted_sources": [
+        "reuters.com",
+        "apnews.com",
+        "bloomberg.com",
+        "ft.com",
+        "wsj.com",
+        "cnbc.com"
+      ],
+      "keywords_any": [
+        "bank",
+        "banking",
+        "liquidity",
+        "credit",
+        "funding",
+        "stress",
+        "crisis",
+        "failure",
+        "rescue",
+        "emergency"
+      ]
+    }
+  ],
+  "state_path": "state.json",
+  "status_path": "latest_status.json",
+  "markdown_path": "latest_status.md"
+}

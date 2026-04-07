@@ -1,0 +1,639 @@
+//@version=6
+indicator("Wammie / Moolah Trigger - Naked Forex Aligned", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// -----------------------------
+// Inputs
+// -----------------------------
+const int MAX_SCAN_BARS = 200
+
+groupStructure = "1) Structure & Zones"
+groupCandle = "2) Catalyst Candle"
+groupExec = "3) Execution"
+groupFilter = "4) Filters"
+groupVis = "5) Visuals"
+
+atrLen = input.int(14, "ATR Length", minval=5, maxval=100, group=groupStructure)
+pivotLen = input.int(3, "Pivot Length (Auto Zones)", minval=1, maxval=10, group=groupStructure)
+useZoneFilter = input.bool(false, "Require Zone Confluence", group=groupStructure)
+zoneSource = input.string("Auto Pivot (Dynamic)", "Zone Source", options=["Auto Pivot (Dynamic)", "Manual Static"], group=groupStructure)
+freezeAutoZones = input.bool(false, "Freeze Auto Zones After First Detection", group=groupStructure)
+manualSupportZoneInput = input.float(0.0, "Manual Support Zone (0 = not set)", group=groupStructure)
+manualResistanceZoneInput = input.float(0.0, "Manual Resistance Zone (0 = not set)", group=groupStructure)
+zoneTolTicks = input.int(8, "Zone Tolerance (Ticks)", minval=1, maxval=200, group=groupStructure)
+zoneTolAtr = input.float(0.10, "Zone Tolerance (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupStructure)
+minBarsBetweenTouches = input.int(4, "Min Candles Between Touches", minval=2, maxval=50, group=groupStructure)
+idealBarsBetweenTouches = input.int(20, "A+ Candles Between Touches", minval=6, maxval=100, group=groupStructure)
+maxBarsBetweenTouches = input.int(80, "Max Candles Between Touches", minval=10, maxval=MAX_SCAN_BARS, group=groupStructure)
+minSecondTouchTicks = input.int(0, "Min Higher-Low / Lower-High Gap (Ticks)", minval=0, maxval=100, group=groupStructure)
+minSecondTouchAtr = input.float(0.0, "Min Higher-Low / Lower-High Gap (ATR)", minval=0.0, maxval=0.5, step=0.01, group=groupStructure)
+maxSecondTouchTicks = input.int(80, "Max Second-Touch Distance From First Touch (Ticks)", minval=1, maxval=500, group=groupStructure)
+maxSecondTouchAtr = input.float(0.80, "Max Second-Touch Distance From First Touch (ATR)", minval=0.01, maxval=5.0, step=0.01, group=groupStructure)
+maxInterimRetests = input.int(1, "Max Interim Zone Retests (Chop Filter)", minval=0, maxval=10, group=groupStructure)
+requireFirstTouchExtreme = input.bool(true, "Require First Touch at Local Extreme", group=groupStructure)
+extremeLookback = input.int(20, "Extreme Lookback", minval=7, maxval=200, group=groupStructure)
+requireBounceBetweenTouches = input.bool(false, "Require Move Away from Zone Between Touches", group=groupStructure)
+minBounceAtr = input.float(0.5, "Min Bounce From Zone (ATR)", minval=0.0, maxval=5.0, step=0.1, group=groupStructure)
+
+requireCandleColor = input.bool(false, "Require Bull/Bear Candle Color", group=groupCandle)
+minBodyAtr = input.float(0.08, "Min Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=groupCandle)
+closeNearExtremeTicks = input.int(10, "Close-to-Extreme Tolerance (Ticks)", minval=1, maxval=200, group=groupCandle)
+closeNearExtremeAtr = input.float(0.05, "Close-to-Extreme Tolerance (ATR)", minval=0.0, maxval=0.5, step=0.01, group=groupCandle)
+minRejectionWickBody = input.float(0.10, "Min Rejection Wick / Body", minval=0.0, maxval=5.0, step=0.05, group=groupCandle)
+
+entryOffsetTicks = input.int(2, "Entry Offset (Ticks)", minval=0, maxval=50, group=groupExec)
+stopOffsetTicks = input.int(2, "Stop Buffer (Ticks)", minval=0, maxval=50, group=groupExec)
+stopOffsetAtr = input.float(0.05, "Stop Buffer (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupExec)
+triggerMode = input.string("Within N Candles (3-5)", "Entry Trigger Window", options=["Within N Candles (3-5)", "Next Candle (A+)"], group=groupExec)
+entryExpiryBars = input.int(5, "N Candles (if selected)", minval=2, maxval=10, group=groupExec)
+targetMode = input.string("R Multiple", "Target Mode", options=["Nearest Zone", "R Multiple"], group=groupExec)
+targetRR = input.float(2.0, "R Multiple Target", minval=1.0, maxval=10.0, step=0.1, group=groupExec)
+targetZoneBufferTicks = input.int(2, "Target Zone Buffer (Ticks)", minval=0, maxval=50, group=groupExec)
+breakevenAtR = input.float(1.0, "Move SL to BE at +R", minval=0.5, maxval=5.0, step=0.1, group=groupExec)
+
+useTrendFilter = input.bool(true, "Use Daily 200 SMA + H4 50 EMA", group=groupFilter)
+dailySmaLen = input.int(200, "Daily SMA Length", minval=50, maxval=400, group=groupFilter)
+h4EmaLen = input.int(50, "H4 EMA Length", minval=20, maxval=200, group=groupFilter)
+useSessionFilter = input.bool(true, "Use Session Filter", group=groupFilter)
+tradeSession = input.session("0700-1700", "Session (Exchange Time)", group=groupFilter)
+useMacdFilter = input.bool(false, "Use MACD Direction Filter", group=groupFilter)
+macdFast = input.int(12, "MACD Fast", minval=5, maxval=50, group=groupFilter)
+macdSlow = input.int(26, "MACD Slow", minval=10, maxval=100, group=groupFilter)
+macdSignalLen = input.int(9, "MACD Signal", minval=3, maxval=30, group=groupFilter)
+useRsiFilter = input.bool(false, "Use RSI Overbought/Oversold Filter", group=groupFilter)
+rsiLen = input.int(14, "RSI Length", minval=5, maxval=50, group=groupFilter)
+rsiLongMax = input.float(35.0, "RSI Max for Wammie", minval=5.0, maxval=60.0, step=0.5, group=groupFilter)
+rsiShortMin = input.float(65.0, "RSI Min for Moolah", minval=40.0, maxval=95.0, step=0.5, group=groupFilter)
+useRoomLeftFilter = input.bool(false, "Require Room to the Left", group=groupFilter)
+roomLeftBars = input.int(7, "Room-Left Bars", minval=3, maxval=100, group=groupFilter)
+
+showZones = input.bool(true, "Plot Active Zones", group=groupVis)
+showStructure = input.bool(true, "Plot First-Touch References", group=groupVis)
+showLevels = input.bool(true, "Plot Entry/SL/TP", group=groupVis)
+showMarkers = input.bool(true, "Plot Event Markers", group=groupVis)
+showCandidateFirstTouchMarkers = input.bool(false, "Plot Candidate W1/M1 Markers", group=groupVis)
+showLinkedFirstTouchLabels = input.bool(true, "Plot W1/M1 Used By Confirmed Setup", group=groupVis)
+showFirstSecondConnector = input.bool(true, "Plot First-to-Second Touch Connector", group=groupVis)
+showSessionBg = input.bool(false, "Shade Active Session", group=groupVis)
+
+// -----------------------------
+// Helpers
+// -----------------------------
+atr = ta.atr(atrLen)
+
+tolFromAtr(float atrValue, float atrMult, int ticks) =>
+    math.max(syminfo.mintick * ticks, atrValue * atrMult)
+
+touchesSupport(float zone, float tol) =>
+    not na(zone) and low <= zone + tol and low >= zone - tol
+
+touchesResistance(float zone, float tol) =>
+    not na(zone) and high >= zone - tol and high <= zone + tol
+
+countInterimTouches(int barsBetween, float zone, float tol, bool supportSide) =>
+    int cnt = 0
+    for i = 1 to MAX_SCAN_BARS
+        if i < barsBetween
+            bool touched = supportSide ? (not na(low[i]) and low[i] <= zone + tol and low[i] >= zone - tol) : (not na(high[i]) and high[i] >= zone - tol and high[i] <= zone + tol)
+            cnt += touched ? 1 : 0
+    cnt
+
+maxHighBetween(int barsBetween) =>
+    float mx = na
+    for i = 1 to MAX_SCAN_BARS
+        if i < barsBetween and not na(high[i])
+            mx := na(mx) ? high[i] : math.max(mx, high[i])
+    mx
+
+minLowBetween(int barsBetween) =>
+    float mn = na
+    for i = 1 to MAX_SCAN_BARS
+        if i < barsBetween and not na(low[i])
+            mn := na(mn) ? low[i] : math.min(mn, low[i])
+    mn
+
+// -----------------------------
+// Trend/session/momentum filters
+// -----------------------------
+dClose = request.security(syminfo.tickerid, "D", close, lookahead=barmerge.lookahead_off)
+dSma = request.security(syminfo.tickerid, "D", ta.sma(close, dailySmaLen), lookahead=barmerge.lookahead_off)
+h4Close = request.security(syminfo.tickerid, "240", close, lookahead=barmerge.lookahead_off)
+h4Ema = request.security(syminfo.tickerid, "240", ta.ema(close, h4EmaLen), lookahead=barmerge.lookahead_off)
+trendLong = dClose > dSma and h4Close > h4Ema
+trendShort = dClose < dSma and h4Close < h4Ema
+inSession = not na(time(timeframe.period, tradeSession))
+
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignalLen)
+macdLongOk = macdLine > macdSignal and macdHist > 0
+macdShortOk = macdLine < macdSignal and macdHist < 0
+rsiValue = ta.rsi(close, rsiLen)
+rsiLongOk = rsiValue <= rsiLongMax
+rsiShortOk = rsiValue >= rsiShortMin
+
+// -----------------------------
+// Auto zones (pivot approximation)
+// -----------------------------
+var float autoSupportZone = na
+var float autoResistanceZone = na
+
+pLow = ta.pivotlow(low, pivotLen, pivotLen)
+pHigh = ta.pivothigh(high, pivotLen, pivotLen)
+if not na(pLow)
+    autoSupportZone := freezeAutoZones and not na(autoSupportZone) ? autoSupportZone : pLow
+if not na(pHigh)
+    autoResistanceZone := freezeAutoZones and not na(autoResistanceZone) ? autoResistanceZone : pHigh
+
+manualSupportZone = manualSupportZoneInput > 0 ? manualSupportZoneInput : na
+manualResistanceZone = manualResistanceZoneInput > 0 ? manualResistanceZoneInput : na
+supportZone = zoneSource == "Manual Static" ? manualSupportZone : autoSupportZone
+resistanceZone = zoneSource == "Manual Static" ? manualResistanceZone : autoResistanceZone
+
+zoneTol = tolFromAtr(atr, zoneTolAtr, zoneTolTicks)
+secondTouchDeltaMin = tolFromAtr(atr, minSecondTouchAtr, minSecondTouchTicks)
+secondTouchDeltaMax = math.max(secondTouchDeltaMin, tolFromAtr(atr, maxSecondTouchAtr, maxSecondTouchTicks))
+closeTol = tolFromAtr(atr, closeNearExtremeAtr, closeNearExtremeTicks)
+stopBuf = tolFromAtr(atr, stopOffsetAtr, stopOffsetTicks)
+targetZoneBuffer = syminfo.mintick * targetZoneBufferTicks
+
+// -----------------------------
+// Catalyst definitions
+// -----------------------------
+candleRange = math.max(high - low, syminfo.mintick)
+body = math.abs(close - open)
+bodyOk = body >= atr * minBodyAtr
+bullCloseStrong = (high - close) <= closeTol
+bearCloseStrong = (close - low) <= closeTol
+lowerWick = math.min(open, close) - low
+upperWick = high - math.max(open, close)
+bullWickOk = lowerWick >= body * minRejectionWickBody
+bearWickOk = upperWick >= body * minRejectionWickBody
+bullCatalyst = bodyOk and bullCloseStrong and bullWickOk and (not requireCandleColor or close > open)
+bearCatalyst = bodyOk and bearCloseStrong and bearWickOk and (not requireCandleColor or close < open)
+
+commonLongFilter = (not useTrendFilter or trendLong) and (not useSessionFilter or inSession) and (not useMacdFilter or macdLongOk) and (not useRsiFilter or rsiLongOk)
+commonShortFilter = (not useTrendFilter or trendShort) and (not useSessionFilter or inSession) and (not useMacdFilter or macdShortOk) and (not useRsiFilter or rsiShortOk)
+
+// -----------------------------
+// Touch-tracking state
+// -----------------------------
+var int wFirstBar = na
+var float wFirstLow = na
+var float wFirstZone = na
+var line wFirstLine = na
+
+var int mFirstBar = na
+var float mFirstHigh = na
+var float mFirstZone = na
+var line mFirstLine = na
+
+// -----------------------------
+// Pending/trade state
+// pendingDir/tradeDir: 1 long (Wammie), -1 short (Moolah), 0 none
+// -----------------------------
+var int pendingDir = 0
+var float pendingEntry = na
+var float pendingStop = na
+var float pendingTarget = na
+var float pendingBE = na
+var int pendingBar = na
+var int pendingBarsBetween = na
+var bool pendingAPlus = false
+
+var int tradeDir = 0
+var float tradeEntry = na
+var float tradeStop = na
+var float tradeTarget = na
+var float tradeBE = na
+var bool movedToBE = false
+
+// Event flags
+bullFirstTouchEvent = false
+bearFirstTouchEvent = false
+bullSetupEvent = false
+bearSetupEvent = false
+bullAPlusSetupEvent = false
+bearAPlusSetupEvent = false
+bullEntryEvent = false
+bearEntryEvent = false
+setupCanceledEvent = false
+breakevenEvent = false
+targetHitEvent = false
+stopHitEvent = false
+
+if barstate.isconfirmed
+    bullSignal = false
+    bearSignal = false
+    int bullBarsBetween = na
+    int bearBarsBetween = na
+    float bullFirstRef = na
+    float bearFirstRef = na
+    int bullFirstBarUsed = na
+    int bearFirstBarUsed = na
+    int bullSecondBarUsed = na
+    int bearSecondBarUsed = na
+    float bullSecondRef = na
+    float bearSecondRef = na
+
+    if not showStructure
+        if not na(wFirstLine)
+            line.delete(wFirstLine)
+            wFirstLine := na
+        if not na(mFirstLine)
+            line.delete(mFirstLine)
+            mFirstLine := na
+
+    // Keep tracking only when flat.
+    if pendingDir == 0 and tradeDir == 0
+        if not na(wFirstBar) and bar_index - wFirstBar > maxBarsBetweenTouches
+            wFirstBar := na
+            wFirstLow := na
+            wFirstZone := na
+            if not na(wFirstLine)
+                line.delete(wFirstLine)
+                wFirstLine := na
+        if not na(mFirstBar) and bar_index - mFirstBar > maxBarsBetweenTouches
+            mFirstBar := na
+            mFirstHigh := na
+            mFirstZone := na
+            if not na(mFirstLine)
+                line.delete(mFirstLine)
+                mFirstLine := na
+
+        // Record first touch for Wammie candidate.
+        if na(wFirstBar)
+            zoneTouch = useZoneFilter and touchesSupport(supportZone, zoneTol)
+            pivotTouch = not useZoneFilter and not na(pLow)
+            firstExtremeOkZone = not requireFirstTouchExtreme or (bar_index > extremeLookback and low <= ta.lowest(low, extremeLookback))
+            firstExtremeOkPivot = not requireFirstTouchExtreme or (bar_index >= pivotLen + extremeLookback and low[pivotLen] <= ta.lowest(low, extremeLookback)[pivotLen])
+            if zoneTouch and firstExtremeOkZone
+                wFirstBar := bar_index
+                wFirstLow := low
+                wFirstZone := supportZone
+                bullFirstTouchEvent := true
+                if showStructure
+                    if not na(wFirstLine)
+                        line.delete(wFirstLine)
+                    wFirstLine := line.new(wFirstBar, wFirstLow, bar_index, wFirstLow, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.lime, 0), width=2)
+            else if pivotTouch and firstExtremeOkPivot and bar_index >= pivotLen
+                wFirstBar := bar_index - pivotLen
+                wFirstLow := low[pivotLen]
+                wFirstZone := low[pivotLen]
+                bullFirstTouchEvent := true
+                if showStructure
+                    if not na(wFirstLine)
+                        line.delete(wFirstLine)
+                    wFirstLine := line.new(wFirstBar, wFirstLow, bar_index, wFirstLow, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.lime, 0), width=2)
+
+        // Record first touch for Moolah candidate.
+        if na(mFirstBar)
+            zoneTouch = useZoneFilter and touchesResistance(resistanceZone, zoneTol)
+            pivotTouch = not useZoneFilter and not na(pHigh)
+            firstExtremeOkZone = not requireFirstTouchExtreme or (bar_index > extremeLookback and high >= ta.highest(high, extremeLookback))
+            firstExtremeOkPivot = not requireFirstTouchExtreme or (bar_index >= pivotLen + extremeLookback and high[pivotLen] >= ta.highest(high, extremeLookback)[pivotLen])
+            if zoneTouch and firstExtremeOkZone
+                mFirstBar := bar_index
+                mFirstHigh := high
+                mFirstZone := resistanceZone
+                bearFirstTouchEvent := true
+                if showStructure
+                    if not na(mFirstLine)
+                        line.delete(mFirstLine)
+                    mFirstLine := line.new(mFirstBar, mFirstHigh, bar_index, mFirstHigh, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.fuchsia, 0), width=2)
+            else if pivotTouch and firstExtremeOkPivot and bar_index >= pivotLen
+                mFirstBar := bar_index - pivotLen
+                mFirstHigh := high[pivotLen]
+                mFirstZone := high[pivotLen]
+                bearFirstTouchEvent := true
+                if showStructure
+                    if not na(mFirstLine)
+                        line.delete(mFirstLine)
+                    mFirstLine := line.new(mFirstBar, mFirstHigh, bar_index, mFirstHigh, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.fuchsia, 0), width=2)
+
+        // Wammie second-touch evaluation.
+        if not na(wFirstBar)
+            if showStructure and not na(wFirstLine)
+                line.set_x2(wFirstLine, bar_index)
+                line.set_y2(wFirstLine, wFirstLow)
+
+            bool secondTouchCandidate = false
+            float secondLow = na
+            int secondBar = na
+            if useZoneFilter
+                secondTouchCandidate := touchesSupport(wFirstZone, zoneTol)
+                secondLow := low
+                secondBar := bar_index
+            else if not na(pLow) and bar_index >= pivotLen
+                secondTouchCandidate := true
+                secondLow := low[pivotLen]
+                secondBar := bar_index - pivotLen
+
+            if secondTouchCandidate and not na(secondBar) and secondBar > wFirstBar
+                barsFromFirst = secondBar - wFirstBar
+                if secondLow < wFirstLow
+                    // New lower low becomes the new first touch baseline.
+                    wFirstBar := secondBar
+                    wFirstLow := secondLow
+                    wFirstZone := useZoneFilter and not na(supportZone) ? supportZone : secondLow
+                    bullFirstTouchEvent := true
+                    if showStructure
+                        if not na(wFirstLine)
+                            line.delete(wFirstLine)
+                        wFirstLine := line.new(wFirstBar, wFirstLow, bar_index, wFirstLow, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.lime, 0), width=2)
+                else if barsFromFirst >= minBarsBetweenTouches and barsFromFirst <= maxBarsBetweenTouches
+                    secondHigher = secondLow >= wFirstLow + secondTouchDeltaMin
+                    secondWithinMax = secondLow <= wFirstLow + secondTouchDeltaMax
+                    interimTouches = useZoneFilter ? countInterimTouches(barsFromFirst, wFirstZone, zoneTol, true) : 0
+                    interimOk = useZoneFilter ? interimTouches <= maxInterimRetests : true
+                    maxHigh = useZoneFilter ? maxHighBetween(barsFromFirst) : na
+                    bounceOk = useZoneFilter ? (not requireBounceBetweenTouches or (not na(maxHigh) and maxHigh >= wFirstZone + atr * minBounceAtr)) : true
+                    roomLeftOk = not useRoomLeftFilter or (bar_index > roomLeftBars and ta.lowest(low[1], roomLeftBars) > wFirstZone + (useZoneFilter ? zoneTol : secondTouchDeltaMin))
+                    filterOk = commonLongFilter and roomLeftOk
+
+                    if secondHigher and secondWithinMax and interimOk and bounceOk and bullCatalyst and filterOk
+                        bullSignal := true
+                        bullBarsBetween := barsFromFirst
+                        bullFirstRef := wFirstLow
+                        bullFirstBarUsed := wFirstBar
+                        bullSecondBarUsed := secondBar
+                        bullSecondRef := secondLow
+                        wFirstBar := na
+                        wFirstLow := na
+                        wFirstZone := na
+                        if not na(wFirstLine)
+                            line.delete(wFirstLine)
+                            wFirstLine := na
+                    else if not secondHigher or not secondWithinMax or not interimOk
+                        // Structure invalid (no higher low or too choppy): restart baseline here.
+                        wFirstBar := secondBar
+                        wFirstLow := secondLow
+                        wFirstZone := useZoneFilter and not na(supportZone) ? supportZone : secondLow
+                        bullFirstTouchEvent := true
+                        if showStructure
+                            if not na(wFirstLine)
+                                line.delete(wFirstLine)
+                            wFirstLine := line.new(wFirstBar, wFirstLow, bar_index, wFirstLow, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.lime, 0), width=2)
+
+        // Moolah second-touch evaluation.
+        if not na(mFirstBar)
+            if showStructure and not na(mFirstLine)
+                line.set_x2(mFirstLine, bar_index)
+                line.set_y2(mFirstLine, mFirstHigh)
+
+            bool secondTouchCandidate = false
+            float secondHigh = na
+            int secondBar = na
+            if useZoneFilter
+                secondTouchCandidate := touchesResistance(mFirstZone, zoneTol)
+                secondHigh := high
+                secondBar := bar_index
+            else if not na(pHigh) and bar_index >= pivotLen
+                secondTouchCandidate := true
+                secondHigh := high[pivotLen]
+                secondBar := bar_index - pivotLen
+
+            if secondTouchCandidate and not na(secondBar) and secondBar > mFirstBar
+                barsFromFirst = secondBar - mFirstBar
+                if secondHigh > mFirstHigh
+                    // New higher high becomes the new first touch baseline.
+                    mFirstBar := secondBar
+                    mFirstHigh := secondHigh
+                    mFirstZone := useZoneFilter and not na(resistanceZone) ? resistanceZone : secondHigh
+                    bearFirstTouchEvent := true
+                    if showStructure
+                        if not na(mFirstLine)
+                            line.delete(mFirstLine)
+                        mFirstLine := line.new(mFirstBar, mFirstHigh, bar_index, mFirstHigh, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.fuchsia, 0), width=2)
+                else if barsFromFirst >= minBarsBetweenTouches and barsFromFirst <= maxBarsBetweenTouches
+                    secondLower = secondHigh <= mFirstHigh - secondTouchDeltaMin
+                    secondWithinMax = secondHigh >= mFirstHigh - secondTouchDeltaMax
+                    interimTouches = useZoneFilter ? countInterimTouches(barsFromFirst, mFirstZone, zoneTol, false) : 0
+                    interimOk = useZoneFilter ? interimTouches <= maxInterimRetests : true
+                    minLow = useZoneFilter ? minLowBetween(barsFromFirst) : na
+                    bounceOk = useZoneFilter ? (not requireBounceBetweenTouches or (not na(minLow) and minLow <= mFirstZone - atr * minBounceAtr)) : true
+                    roomLeftOk = not useRoomLeftFilter or (bar_index > roomLeftBars and ta.highest(high[1], roomLeftBars) < mFirstZone - (useZoneFilter ? zoneTol : secondTouchDeltaMin))
+                    filterOk = commonShortFilter and roomLeftOk
+
+                    if secondLower and secondWithinMax and interimOk and bounceOk and bearCatalyst and filterOk
+                        bearSignal := true
+                        bearBarsBetween := barsFromFirst
+                        bearFirstRef := mFirstHigh
+                        bearFirstBarUsed := mFirstBar
+                        bearSecondBarUsed := secondBar
+                        bearSecondRef := secondHigh
+                        mFirstBar := na
+                        mFirstHigh := na
+                        mFirstZone := na
+                        if not na(mFirstLine)
+                            line.delete(mFirstLine)
+                            mFirstLine := na
+                    else if not secondLower or not secondWithinMax or not interimOk
+                        // Structure invalid (no lower high or too choppy): restart baseline here.
+                        mFirstBar := secondBar
+                        mFirstHigh := secondHigh
+                        mFirstZone := useZoneFilter and not na(resistanceZone) ? resistanceZone : secondHigh
+                        bearFirstTouchEvent := true
+                        if showStructure
+                            if not na(mFirstLine)
+                                line.delete(mFirstLine)
+                            mFirstLine := line.new(mFirstBar, mFirstHigh, bar_index, mFirstHigh, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.fuchsia, 0), width=2)
+
+    // If both sides fire on same close, skip to avoid ambiguous execution.
+    if bullSignal and bearSignal
+        bullSignal := false
+        bearSignal := false
+
+    // Build pending order only when flat.
+    if pendingDir == 0 and tradeDir == 0
+        if bullSignal and not bearSignal
+            e = high + syminfo.mintick * entryOffsetTicks
+            s = bullFirstRef - stopBuf
+            r = math.max(e - s, syminfo.mintick)
+            zoneT = not na(resistanceZone) and resistanceZone > e ? resistanceZone - targetZoneBuffer : na
+            rrT = e + r * targetRR
+            t = targetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+
+            pendingDir := 1
+            pendingEntry := e
+            pendingStop := s
+            pendingTarget := t
+            pendingBE := e + r * breakevenAtR
+            pendingBar := bar_index
+            pendingBarsBetween := bullBarsBetween
+            pendingAPlus := bullBarsBetween >= idealBarsBetweenTouches
+
+            bullSetupEvent := true
+            bullAPlusSetupEvent := pendingAPlus
+            if showLinkedFirstTouchLabels and not na(bullFirstBarUsed) and not na(bullFirstRef)
+                label.new(bullFirstBarUsed, bullFirstRef, "W1*", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.lime, 0), textcolor=color.white, size=size.tiny)
+            if showFirstSecondConnector and not na(bullFirstBarUsed) and not na(bullSecondBarUsed) and not na(bullFirstRef) and not na(bullSecondRef)
+                line.new(bullFirstBarUsed, bullFirstRef, bullSecondBarUsed, bullSecondRef, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.green, 25), width=1, style=line.style_dashed)
+
+            // Clear opposite-side structure while order is pending.
+            wFirstBar := na
+            wFirstLow := na
+            wFirstZone := na
+            if not na(wFirstLine)
+                line.delete(wFirstLine)
+                wFirstLine := na
+            mFirstBar := na
+            mFirstHigh := na
+            mFirstZone := na
+            if not na(mFirstLine)
+                line.delete(mFirstLine)
+                mFirstLine := na
+
+        else if bearSignal and not bullSignal
+            e = low - syminfo.mintick * entryOffsetTicks
+            s = bearFirstRef + stopBuf
+            r = math.max(s - e, syminfo.mintick)
+            zoneT = not na(supportZone) and supportZone < e ? supportZone + targetZoneBuffer : na
+            rrT = e - r * targetRR
+            t = targetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+
+            pendingDir := -1
+            pendingEntry := e
+            pendingStop := s
+            pendingTarget := t
+            pendingBE := e - r * breakevenAtR
+            pendingBar := bar_index
+            pendingBarsBetween := bearBarsBetween
+            pendingAPlus := bearBarsBetween >= idealBarsBetweenTouches
+
+            bearSetupEvent := true
+            bearAPlusSetupEvent := pendingAPlus
+            if showLinkedFirstTouchLabels and not na(bearFirstBarUsed) and not na(bearFirstRef)
+                label.new(bearFirstBarUsed, bearFirstRef, "M1*", xloc=xloc.bar_index, style=label.style_label_down, color=color.new(color.fuchsia, 0), textcolor=color.white, size=size.tiny)
+            if showFirstSecondConnector and not na(bearFirstBarUsed) and not na(bearSecondBarUsed) and not na(bearFirstRef) and not na(bearSecondRef)
+                line.new(bearFirstBarUsed, bearFirstRef, bearSecondBarUsed, bearSecondRef, xloc=xloc.bar_index, extend=extend.none, color=color.new(color.red, 25), width=1, style=line.style_dashed)
+
+            // Clear opposite-side structure while order is pending.
+            wFirstBar := na
+            wFirstLow := na
+            wFirstZone := na
+            if not na(wFirstLine)
+                line.delete(wFirstLine)
+                wFirstLine := na
+            mFirstBar := na
+            mFirstHigh := na
+            mFirstZone := na
+            if not na(mFirstLine)
+                line.delete(mFirstLine)
+                mFirstLine := na
+
+    // Pending-order management.
+    if pendingDir != 0
+        barsSinceSignal = bar_index - pendingBar
+        canTrigger = triggerMode == "Next Candle (A+)" ? barsSinceSignal == 1 : barsSinceSignal >= 1
+        expired = triggerMode == "Next Candle (A+)" ? barsSinceSignal > 1 : barsSinceSignal > entryExpiryBars
+
+        invalidBeforeTrigger = canTrigger and (pendingDir == 1 ? low <= pendingStop : high >= pendingStop)
+        triggered = canTrigger and (pendingDir == 1 ? high >= pendingEntry : low <= pendingEntry)
+
+        if invalidBeforeTrigger
+            setupCanceledEvent := true
+            pendingDir := 0
+            pendingEntry := na
+            pendingStop := na
+            pendingTarget := na
+            pendingBE := na
+            pendingBar := na
+            pendingBarsBetween := na
+            pendingAPlus := false
+        else if triggered
+            tradeDir := pendingDir
+            tradeEntry := pendingEntry
+            tradeStop := pendingStop
+            tradeTarget := pendingTarget
+            tradeBE := pendingBE
+            movedToBE := false
+
+            bullEntryEvent := tradeDir == 1
+            bearEntryEvent := tradeDir == -1
+
+            pendingDir := 0
+            pendingEntry := na
+            pendingStop := na
+            pendingTarget := na
+            pendingBE := na
+            pendingBar := na
+            pendingBarsBetween := na
+            pendingAPlus := false
+        else if expired
+            setupCanceledEvent := true
+            pendingDir := 0
+            pendingEntry := na
+            pendingStop := na
+            pendingTarget := na
+            pendingBE := na
+            pendingBar := na
+            pendingBarsBetween := na
+            pendingAPlus := false
+
+    // Active-trade management.
+    if tradeDir != 0
+        activeStop = movedToBE ? tradeEntry : tradeStop
+        beReached = not movedToBE and (tradeDir == 1 ? high >= tradeBE : low <= tradeBE)
+        if beReached
+            movedToBE := true
+            breakevenEvent := true
+            activeStop := tradeEntry
+
+        stopTouched = tradeDir == 1 ? low <= activeStop : high >= activeStop
+        targetTouched = tradeDir == 1 ? high >= tradeTarget : low <= tradeTarget
+
+        if stopTouched or targetTouched
+            // Conservative fill assumption if both touched on the same bar.
+            if stopTouched
+                stopHitEvent := true
+            else
+                targetHitEvent := true
+
+            tradeDir := 0
+            tradeEntry := na
+            tradeStop := na
+            tradeTarget := na
+            tradeBE := na
+            movedToBE := false
+
+// -----------------------------
+// Visuals
+// -----------------------------
+activeEntry = pendingDir != 0 ? pendingEntry : tradeDir != 0 ? tradeEntry : na
+activeStop = pendingDir != 0 ? pendingStop : tradeDir != 0 ? (movedToBE ? tradeEntry : tradeStop) : na
+activeTarget = pendingDir != 0 ? pendingTarget : tradeDir != 0 ? tradeTarget : na
+
+plot(showZones ? supportZone : na, "Support Zone", color=color.new(color.green, 30), linewidth=2, style=plot.style_linebr)
+plot(showZones ? resistanceZone : na, "Resistance Zone", color=color.new(color.red, 30), linewidth=2, style=plot.style_linebr)
+plot(showLevels ? activeEntry : na, "Entry", color=color.new(color.blue, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels ? activeStop : na, "Stop", color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels ? activeTarget : na, "Target", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+
+bgcolor(showSessionBg and inSession ? color.new(color.teal, 90) : na, title="Session Background")
+
+plotshape(showMarkers and showCandidateFirstTouchMarkers and bullFirstTouchEvent, title="Wammie First Touch Candidate", style=shape.circle, location=location.belowbar, color=color.new(color.lime, 0), text="W1", size=size.tiny)
+plotshape(showMarkers and showCandidateFirstTouchMarkers and bearFirstTouchEvent, title="Moolah First Touch Candidate", style=shape.circle, location=location.abovebar, color=color.new(color.fuchsia, 0), text="M1", size=size.tiny)
+plotshape(showMarkers and bullSetupEvent, title="Wammie Setup", style=shape.labelup, location=location.belowbar, color=color.new(color.blue, 0), textcolor=color.white, text="W BUY", size=size.tiny)
+plotshape(showMarkers and bearSetupEvent, title="Moolah Setup", style=shape.labeldown, location=location.abovebar, color=color.new(color.blue, 0), textcolor=color.white, text="M SELL", size=size.tiny)
+plotshape(showMarkers and bullAPlusSetupEvent, title="Wammie A+ Setup", style=shape.triangleup, location=location.belowbar, color=color.new(color.green, 0), text="W+", size=size.tiny)
+plotshape(showMarkers and bearAPlusSetupEvent, title="Moolah A+ Setup", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), text="M+", size=size.tiny)
+plotshape(showMarkers and bullEntryEvent, title="Wammie Entry", style=shape.arrowup, location=location.belowbar, color=color.new(color.green, 0), text="ENTRY", size=size.tiny)
+plotshape(showMarkers and bearEntryEvent, title="Moolah Entry", style=shape.arrowdown, location=location.abovebar, color=color.new(color.red, 0), text="ENTRY", size=size.tiny)
+plotshape(showMarkers and setupCanceledEvent, title="Setup Canceled", style=shape.xcross, location=location.top, color=color.new(color.gray, 0), text="CXL", size=size.tiny)
+plotshape(showMarkers and breakevenEvent ? tradeEntry : na, title="Breakeven", style=shape.circle, location=location.absolute, color=color.new(color.yellow, 0), text="BE", size=size.tiny)
+plotshape(showMarkers and targetHitEvent, title="Target Hit", style=shape.triangleup, location=location.abovebar, color=color.new(color.green, 0), text="TP", size=size.tiny)
+plotshape(showMarkers and stopHitEvent, title="Stop Hit", style=shape.triangledown, location=location.belowbar, color=color.new(color.red, 0), text="SL", size=size.tiny)
+
+// -----------------------------
+// Alerts
+// -----------------------------
+alertcondition(bullFirstTouchEvent, "Wammie First Touch", "Potential Wammie first touch recorded at support.")
+alertcondition(bearFirstTouchEvent, "Moolah First Touch", "Potential Moolah first touch recorded at resistance.")
+alertcondition(bullSetupEvent, "Wammie Setup Ready", "Wammie confirmed. Place Buy Stop above bullish catalyst high.")
+alertcondition(bearSetupEvent, "Moolah Setup Ready", "Moolah confirmed. Place Sell Stop below bearish catalyst low.")
+alertcondition(bullAPlusSetupEvent, "Wammie A+ Setup", "A+ Wammie confirmed (ideal spacing between touches).")
+alertcondition(bearAPlusSetupEvent, "Moolah A+ Setup", "A+ Moolah confirmed (ideal spacing between touches).")
+alertcondition(bullEntryEvent, "Wammie Entry Triggered", "Wammie stop-entry level was triggered.")
+alertcondition(bearEntryEvent, "Moolah Entry Triggered", "Moolah stop-entry level was triggered.")
+alertcondition(setupCanceledEvent, "Wammie/Moolah Setup Canceled", "Setup invalidated or expired before trigger.")
+alertcondition(breakevenEvent, "Move Stop to Breakeven", "Trade reached +R threshold. Move stop to breakeven.")
+alertcondition(targetHitEvent, "Target Hit", "Trade reached target.")
+alertcondition(stopHitEvent, "Stop Hit", "Trade hit stop level.")

@@ -1,0 +1,21 @@
+{
+  "source_csv": "Backtesting Data/EURUSD_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 1e-05,
+  "result": {
+    "indicator": "QQE/QMP",
+    "setups": 272,
+    "entries": 272,
+    "canceled_setups": 0,
+    "closed_trades": 272,
+    "wins": 67,
+    "losses": 152,
+    "breakeven": 53,
+    "win_rate_pct": 24.63,
+    "net_r": -18.0,
+    "avg_r": -0.066,
+    "max_drawdown_r": 23.0
+  }
+}

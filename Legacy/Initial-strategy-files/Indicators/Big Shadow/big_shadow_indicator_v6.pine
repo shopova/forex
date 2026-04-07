@@ -1,0 +1,333 @@
+//@version=6
+indicator("Big Shadow Trigger - Naked Forex Aligned", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// -----------------------------
+// Inputs
+// -----------------------------
+groupPattern = "1) Pattern Rules"
+groupLocation = "2) Zone & Context"
+groupExec = "3) Execution"
+groupFilter = "4) Filters"
+groupVis = "5) Visuals"
+groupProfile = "0) Profile"
+
+profileMode = input.string("Balanced", "Profile Mode", options=["Balanced", "A+ Strict", "Custom"], group=groupProfile)
+pairPresetMode = input.string("MT5 Per-Pair >=2R (2020-2026)", "Pair Preset Mode", options=["MT5 Per-Pair >=2R (2020-2026)", "Off (Manual Inputs)"], group=groupProfile)
+
+atrLen = input.int(14, "ATR Length", minval=5, maxval=100, group=groupPattern)
+requireOutsideBar = input.bool(true, "Require HH + LL vs Previous Candle", group=groupPattern)
+dominanceMode = input.string("Previous 10 Candles (A+)", "Dominance Rule", options=["Previous 5 Candles", "Previous 10 Candles (A+)"], group=groupPattern)
+minRangeVsPrev = input.float(1.20, "Min Range vs Previous Candle", minval=1.0, maxval=5.0, step=0.05, group=groupPattern)
+minRangeAtr = input.float(1.0, "Min Range (ATR)", minval=0.2, maxval=5.0, step=0.1, group=groupPattern)
+closeExtremeTicks = input.int(10, "Close-to-Extreme Tolerance (Ticks)", minval=1, maxval=200, group=groupPattern)
+closeExtremeAtr = input.float(0.03, "Close-to-Extreme Tolerance (ATR)", minval=0.0, maxval=0.5, step=0.01, group=groupPattern)
+
+useZoneFilter = input.bool(false, "Require Zone Confluence", group=groupLocation)
+pivotLen = input.int(3, "Pivot Length (Auto Zones)", minval=1, maxval=10, group=groupLocation)
+zoneTolTicks = input.int(8, "Zone Tolerance (Ticks)", minval=1, maxval=200, group=groupLocation)
+zoneTolAtr = input.float(0.10, "Zone Tolerance (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupLocation)
+requireExtreme = input.bool(false, "Require Extreme High/Low", group=groupLocation)
+extremeLookback = input.int(20, "Extreme Lookback", minval=7, maxval=200, group=groupLocation)
+useRoomLeftFilter = input.bool(false, "Require Room to the Left", group=groupLocation)
+roomLeftBars = input.int(7, "Room-Left Bars", minval=7, maxval=100, group=groupLocation)
+
+entryOffsetTicks = input.int(2, "Entry Offset (Ticks)", minval=0, maxval=50, group=groupExec)
+stopOffsetTicks = input.int(2, "Stop Buffer (Ticks)", minval=0, maxval=50, group=groupExec)
+stopOffsetAtr = input.float(0.05, "Stop Buffer (ATR)", minval=0.0, maxval=1.0, step=0.01, group=groupExec)
+triggerMode = input.string("Next Candle (A+)", "Entry Trigger Window", options=["Next Candle (A+)", "Within N Candles"], group=groupExec)
+entryExpiryBars = input.int(5, "N Candles (if selected)", minval=2, maxval=10, group=groupExec)
+targetMode = input.string("R Multiple", "Target Mode", options=["Nearest Zone", "R Multiple"], group=groupExec)
+targetRR = input.float(2.0, "R Multiple Target", minval=2.0, maxval=10.0, step=0.1, group=groupExec)
+minSetupRR = input.float(2.0, "Minimum Setup R", minval=2.0, maxval=10.0, step=0.1, group=groupExec)
+targetZoneBufferTicks = input.int(2, "Target Zone Buffer (Ticks)", minval=0, maxval=50, group=groupExec)
+breakevenAtR = input.float(1.0, "Move SL to BE at +R", minval=0.5, maxval=5.0, step=0.1, group=groupExec)
+
+useTrendFilter = input.bool(true, "Use Daily 200 SMA + H4 50 EMA", group=groupFilter)
+dailySmaLen = input.int(200, "Daily SMA Length", minval=50, maxval=400, group=groupFilter)
+h4EmaLen = input.int(50, "H4 EMA Length", minval=20, maxval=200, group=groupFilter)
+useSessionFilter = input.bool(false, "Use Session Filter", group=groupFilter)
+tradeSession = input.session("0700-1700", "Session (Exchange Time)", group=groupFilter)
+
+showZones = input.bool(true, "Plot Auto Zones", group=groupVis)
+showLevels = input.bool(true, "Plot Entry/SL/TP", group=groupVis)
+showMarkers = input.bool(true, "Plot Event Markers", group=groupVis)
+showSessionBg = input.bool(false, "Shade Active Session", group=groupVis)
+
+// -----------------------------
+// Helpers
+// -----------------------------
+atr = ta.atr(atrLen)
+
+tolFromAtr(float atrValue, float atrMult, int ticks) =>
+    math.max(syminfo.mintick * ticks, atrValue * atrMult)
+
+zoneTol = tolFromAtr(atr, zoneTolAtr, zoneTolTicks)
+targetZoneBuffer = syminfo.mintick * targetZoneBufferTicks
+strictProfile = profileMode == "A+ Strict"
+customProfile = profileMode == "Custom"
+
+pairKey = str.upper(syminfo.basecurrency + syminfo.currency)
+usePairPreset = pairPresetMode == "MT5 Per-Pair >=2R (2020-2026)"
+presetEURUSD = usePairPreset and pairKey == "EURUSD"
+presetGBPUSD = usePairPreset and pairKey == "GBPUSD"
+presetUSDJPY = usePairPreset and pairKey == "USDJPY"
+presetUSDCAD = usePairPreset and pairKey == "USDCAD"
+presetMajor = presetEURUSD or presetGBPUSD or presetUSDJPY or presetUSDCAD
+presetGBPUSDJPY = presetGBPUSD or presetUSDJPY
+
+effectiveUseZoneFilter = presetMajor ? false : useZoneFilter
+effectiveRequireOutsideBar = presetUSDCAD ? true : presetMajor ? false : requireOutsideBar
+effectiveDominanceMode = presetGBPUSDJPY ? "Previous 10 Candles (A+)" : presetMajor ? "Previous 5 Candles" : dominanceMode
+effectiveMinRangeVsPrev = presetEURUSD or presetUSDCAD ? 1.2 : presetGBPUSDJPY ? 1.1 : minRangeVsPrev
+effectiveMinRangeAtr = presetEURUSD ? 0.9 : presetUSDCAD ? 0.5 : presetGBPUSDJPY ? 0.7 : minRangeAtr
+effectiveCloseExtremeTicks = presetEURUSD ? 20 : presetUSDCAD ? 15 : presetGBPUSDJPY ? 20 : closeExtremeTicks
+effectiveCloseExtremeAtr = presetEURUSD ? 0.02 : presetUSDCAD ? 0.05 : presetGBPUSDJPY ? 0.05 : closeExtremeAtr
+effectiveEntryOffsetTicks = presetEURUSD ? 1 : presetUSDCAD ? 2 : presetGBPUSDJPY ? 2 : entryOffsetTicks
+effectiveStopOffsetTicks = presetEURUSD ? 1 : presetUSDCAD ? 3 : presetGBPUSDJPY ? 1 : stopOffsetTicks
+effectiveStopOffsetAtr = presetEURUSD ? 0.10 : presetUSDCAD ? 0.02 : presetGBPUSDJPY ? 0.05 : stopOffsetAtr
+effectiveTriggerMode = presetUSDCAD ? "Within N Candles" : presetMajor ? "Next Candle (A+)" : triggerMode
+effectiveEntryExpiryBars = presetUSDCAD ? 3 : presetGBPUSDJPY ? 7 : presetEURUSD ? 5 : entryExpiryBars
+effectiveBreakevenAtR = presetEURUSD ? 1.2 : presetUSDCAD ? 1.5 : presetGBPUSDJPY ? 1.5 : breakevenAtR
+effectiveRequireExtreme = presetEURUSD ? true : presetMajor ? false : customProfile ? requireExtreme : strictProfile
+effectiveUseRoomLeftFilter = presetMajor ? false : customProfile ? useRoomLeftFilter : strictProfile
+effectiveUseSessionFilter = presetMajor ? false : customProfile ? useSessionFilter : strictProfile
+effectiveUseTrendFilter = presetMajor ? false : useTrendFilter
+
+closeTol = tolFromAtr(atr, effectiveCloseExtremeAtr, effectiveCloseExtremeTicks)
+stopBuf = tolFromAtr(atr, effectiveStopOffsetAtr, effectiveStopOffsetTicks)
+dominanceLookback = effectiveDominanceMode == "Previous 10 Candles (A+)" ? 10 : 5
+
+// -----------------------------
+// MTF trend/session filters
+// -----------------------------
+dClose = request.security(syminfo.tickerid, "D", close, lookahead=barmerge.lookahead_off)
+dSma = request.security(syminfo.tickerid, "D", ta.sma(close, dailySmaLen), lookahead=barmerge.lookahead_off)
+h4Close = request.security(syminfo.tickerid, "240", close, lookahead=barmerge.lookahead_off)
+h4Ema = request.security(syminfo.tickerid, "240", ta.ema(close, h4EmaLen), lookahead=barmerge.lookahead_off)
+trendLong = dClose > dSma and h4Close > h4Ema
+trendShort = dClose < dSma and h4Close < h4Ema
+inSession = not na(time(timeframe.period, tradeSession))
+
+// -----------------------------
+// Auto zones
+// -----------------------------
+var float supportZone = na
+var float resistanceZone = na
+
+pLow = ta.pivotlow(low, pivotLen, pivotLen)
+pHigh = ta.pivothigh(high, pivotLen, pivotLen)
+if not na(pLow)
+    supportZone := pLow
+if not na(pHigh)
+    resistanceZone := pHigh
+
+atSupport = not na(supportZone) and low <= supportZone + zoneTol and low >= supportZone - zoneTol
+atResistance = not na(resistanceZone) and high >= resistanceZone - zoneTol and high <= resistanceZone + zoneTol
+
+// -----------------------------
+// Big Shadow rules
+// -----------------------------
+enoughBars = bar_index > math.max(math.max(dominanceLookback, roomLeftBars), extremeLookback) + 2
+candleRange = math.max(high - low, syminfo.mintick)
+prevRange = math.max(high[1] - low[1], syminfo.mintick)
+prevMaxRange = ta.highest(high[1] - low[1], dominanceLookback)
+
+outsideBar = high > high[1] and low < low[1]
+dominantRange = not na(prevMaxRange) and candleRange > prevMaxRange and candleRange >= prevRange * effectiveMinRangeVsPrev and candleRange >= atr * effectiveMinRangeAtr
+
+bullCloseOk = (high - close) <= closeTol and close > open
+bearCloseOk = (close - low) <= closeTol and close < open
+
+bullExtreme = low <= ta.lowest(low, extremeLookback)
+bearExtreme = high >= ta.highest(high, extremeLookback)
+
+bullRoomLeftZone = not na(supportZone) and ta.lowest(low[1], roomLeftBars) > supportZone + zoneTol
+bearRoomLeftZone = not na(resistanceZone) and ta.highest(high[1], roomLeftBars) < resistanceZone - zoneTol
+bullRoomLeftExtreme = ta.lowest(low[1], roomLeftBars) > low + zoneTol
+bearRoomLeftExtreme = ta.highest(high[1], roomLeftBars) < high - zoneTol
+bullRoomLeft = effectiveUseZoneFilter ? bullRoomLeftZone : bullRoomLeftExtreme
+bearRoomLeft = effectiveUseZoneFilter ? bearRoomLeftZone : bearRoomLeftExtreme
+
+bullPattern = enoughBars and dominantRange and (not effectiveRequireOutsideBar or outsideBar) and bullCloseOk
+bearPattern = enoughBars and dominantRange and (not effectiveRequireOutsideBar or outsideBar) and bearCloseOk
+
+bullLocationOk = (not effectiveUseZoneFilter or atSupport) and (not effectiveRequireExtreme or bullExtreme) and (not effectiveUseRoomLeftFilter or bullRoomLeft)
+bearLocationOk = (not effectiveUseZoneFilter or atResistance) and (not effectiveRequireExtreme or bearExtreme) and (not effectiveUseRoomLeftFilter or bearRoomLeft)
+
+bullFilterOk = (not effectiveUseTrendFilter or trendLong) and (not effectiveUseSessionFilter or inSession)
+bearFilterOk = (not effectiveUseTrendFilter or trendShort) and (not effectiveUseSessionFilter or inSession)
+
+bullSignal = barstate.isconfirmed and bullPattern and bullLocationOk and bullFilterOk
+bearSignal = barstate.isconfirmed and bearPattern and bearLocationOk and bearFilterOk
+
+// -----------------------------
+// State
+// pendingDir/tradeDir: 1 long, -1 short, 0 none
+// -----------------------------
+var int pendingDir = 0
+var float pendingEntry = na
+var float pendingStop = na
+var float pendingTarget = na
+var float pendingBE = na
+var int pendingBar = na
+
+var int tradeDir = 0
+var float tradeEntry = na
+var float tradeStop = na
+var float tradeTarget = na
+var float tradeBE = na
+var bool movedToBE = false
+
+// Event flags
+bullSetupEvent = false
+bearSetupEvent = false
+bullEntryEvent = false
+bearEntryEvent = false
+setupCanceledEvent = false
+breakevenEvent = false
+targetHitEvent = false
+stopHitEvent = false
+
+if barstate.isconfirmed
+    // Build pending order only when flat.
+    if pendingDir == 0 and tradeDir == 0
+        if bullSignal and not bearSignal
+            e = high + syminfo.mintick * effectiveEntryOffsetTicks
+            s = low - stopBuf
+            r = math.max(e - s, syminfo.mintick)
+            zoneT = not na(resistanceZone) and resistanceZone > e ? resistanceZone - targetZoneBuffer : na
+            rrT = e + r * targetRR
+            t = targetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+            setupRR = (t - e) / r
+
+            if setupRR >= minSetupRR
+                pendingDir := 1
+                pendingEntry := e
+                pendingStop := s
+                pendingTarget := t
+                pendingBE := e + r * effectiveBreakevenAtR
+                pendingBar := bar_index
+                bullSetupEvent := true
+
+        else if bearSignal and not bullSignal
+            e = low - syminfo.mintick * effectiveEntryOffsetTicks
+            s = high + stopBuf
+            r = math.max(s - e, syminfo.mintick)
+            zoneT = not na(supportZone) and supportZone < e ? supportZone + targetZoneBuffer : na
+            rrT = e - r * targetRR
+            t = targetMode == "Nearest Zone" and not na(zoneT) ? zoneT : rrT
+            setupRR = (e - t) / r
+
+            if setupRR >= minSetupRR
+                pendingDir := -1
+                pendingEntry := e
+                pendingStop := s
+                pendingTarget := t
+                pendingBE := e - r * effectiveBreakevenAtR
+                pendingBar := bar_index
+                bearSetupEvent := true
+
+    // Pending-order management.
+    if pendingDir != 0
+        barsSinceSignal = bar_index - pendingBar
+        canTrigger = effectiveTriggerMode == "Next Candle (A+)" ? barsSinceSignal == 1 : barsSinceSignal >= 1
+        expired = effectiveTriggerMode == "Next Candle (A+)" ? barsSinceSignal > 1 : barsSinceSignal > effectiveEntryExpiryBars
+
+        invalidBeforeTrigger = canTrigger and (pendingDir == 1 ? low <= pendingStop : high >= pendingStop)
+        triggered = canTrigger and (pendingDir == 1 ? high >= pendingEntry : low <= pendingEntry)
+
+        if invalidBeforeTrigger
+            setupCanceledEvent := true
+            pendingDir := 0
+            pendingEntry := na
+            pendingStop := na
+            pendingTarget := na
+            pendingBE := na
+            pendingBar := na
+        else if triggered
+            tradeDir := pendingDir
+            tradeEntry := pendingEntry
+            tradeStop := pendingStop
+            tradeTarget := pendingTarget
+            tradeBE := pendingBE
+            movedToBE := false
+
+            bullEntryEvent := tradeDir == 1
+            bearEntryEvent := tradeDir == -1
+
+            pendingDir := 0
+            pendingEntry := na
+            pendingStop := na
+            pendingTarget := na
+            pendingBE := na
+            pendingBar := na
+        else if expired
+            setupCanceledEvent := true
+            pendingDir := 0
+            pendingEntry := na
+            pendingStop := na
+            pendingTarget := na
+            pendingBE := na
+            pendingBar := na
+
+    // Active trade management.
+    if tradeDir != 0
+        activeStop = movedToBE ? tradeEntry : tradeStop
+        beReached = not movedToBE and (tradeDir == 1 ? high >= tradeBE : low <= tradeBE)
+        if beReached
+            movedToBE := true
+            breakevenEvent := true
+            activeStop := tradeEntry
+
+        stopTouched = tradeDir == 1 ? low <= activeStop : high >= activeStop
+        targetTouched = tradeDir == 1 ? high >= tradeTarget : low <= tradeTarget
+
+        if stopTouched or targetTouched
+            // Conservative fill assumption if both touched same bar.
+            if stopTouched
+                stopHitEvent := true
+            else
+                targetHitEvent := true
+
+            tradeDir := 0
+            tradeEntry := na
+            tradeStop := na
+            tradeTarget := na
+            tradeBE := na
+            movedToBE := false
+
+// -----------------------------
+// Visuals
+// -----------------------------
+activeEntry = pendingDir != 0 ? pendingEntry : tradeDir != 0 ? tradeEntry : na
+activeStop = pendingDir != 0 ? pendingStop : tradeDir != 0 ? (movedToBE ? tradeEntry : tradeStop) : na
+activeTarget = pendingDir != 0 ? pendingTarget : tradeDir != 0 ? tradeTarget : na
+
+plot(showZones ? supportZone : na, "Support Zone", color=color.new(color.green, 30), linewidth=2, style=plot.style_linebr)
+plot(showZones ? resistanceZone : na, "Resistance Zone", color=color.new(color.red, 30), linewidth=2, style=plot.style_linebr)
+plot(showLevels ? activeEntry : na, "Entry", color=color.new(color.blue, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels ? activeStop : na, "Stop", color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr)
+plot(showLevels ? activeTarget : na, "Target", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+
+bgcolor(showSessionBg and inSession ? color.new(color.teal, 90) : na, title="Session Background")
+
+plotshape(showMarkers and bullSetupEvent, title="Bull Setup", style=shape.labelup, location=location.belowbar, color=color.new(color.blue, 0), textcolor=color.white, text="BS BUY", size=size.tiny)
+plotshape(showMarkers and bearSetupEvent, title="Bear Setup", style=shape.labeldown, location=location.abovebar, color=color.new(color.blue, 0), textcolor=color.white, text="BS SELL", size=size.tiny)
+plotshape(showMarkers and bullEntryEvent, title="Bull Entry", style=shape.arrowup, location=location.belowbar, color=color.new(color.green, 0), text="ENTRY", size=size.tiny)
+plotshape(showMarkers and bearEntryEvent, title="Bear Entry", style=shape.arrowdown, location=location.abovebar, color=color.new(color.red, 0), text="ENTRY", size=size.tiny)
+plotshape(showMarkers and setupCanceledEvent, title="Setup Canceled", style=shape.xcross, location=location.top, color=color.new(color.gray, 0), text="CXL", size=size.tiny)
+plotshape(showMarkers and breakevenEvent ? tradeEntry : na, title="Breakeven", style=shape.circle, location=location.absolute, color=color.new(color.yellow, 0), text="BE", size=size.tiny)
+plotshape(showMarkers and targetHitEvent, title="Target Hit", style=shape.triangleup, location=location.abovebar, color=color.new(color.green, 0), text="TP", size=size.tiny)
+plotshape(showMarkers and stopHitEvent, title="Stop Hit", style=shape.triangledown, location=location.belowbar, color=color.new(color.red, 0), text="SL", size=size.tiny)
+
+// -----------------------------
+// Alerts
+// -----------------------------
+alertcondition(bullSetupEvent, "Big Shadow Bull Setup Ready", "Bullish Big Shadow confirmed. Place Buy Stop above Big Shadow high.")
+alertcondition(bearSetupEvent, "Big Shadow Bear Setup Ready", "Bearish Big Shadow confirmed. Place Sell Stop below Big Shadow low.")
+alertcondition(bullEntryEvent, "Big Shadow Bull Entry Triggered", "Bullish Big Shadow stop-entry was triggered.")
+alertcondition(bearEntryEvent, "Big Shadow Bear Entry Triggered", "Bearish Big Shadow stop-entry was triggered.")
+alertcondition(setupCanceledEvent, "Big Shadow Setup Canceled", "Big Shadow setup invalidated or expired before trigger.")
+alertcondition(breakevenEvent, "Big Shadow Move to Breakeven", "Trade reached +R threshold. Move stop to breakeven.")
+alertcondition(targetHitEvent, "Big Shadow Target Hit", "Trade reached target.")
+alertcondition(stopHitEvent, "Big Shadow Stop Hit", "Trade hit stop level.")

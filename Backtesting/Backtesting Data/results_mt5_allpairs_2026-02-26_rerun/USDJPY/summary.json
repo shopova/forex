@@ -1,0 +1,55 @@
+{
+  "source_csv": "Backtesting Data/USDJPY_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 0.001,
+  "disable_trend_filter": false,
+  "disable_session_filter": false,
+  "big_shadow_profile": "Balanced",
+  "big_shadow_pair_preset_mode": "MT5 Per-Pair >=2R (2020-2026)",
+  "results": [
+    {
+      "indicator": "Last Kiss",
+      "setups": 53,
+      "entries": 48,
+      "canceled_setups": 518,
+      "closed_trades": 42,
+      "wins": 21,
+      "losses": 21,
+      "breakeven": 0,
+      "win_rate_pct": 50.0,
+      "net_r": 21.0,
+      "avg_r": 0.5,
+      "max_drawdown_r": 5.0
+    },
+    {
+      "indicator": "Big Shadow",
+      "setups": 433,
+      "entries": 367,
+      "canceled_setups": 66,
+      "closed_trades": 367,
+      "wins": 111,
+      "losses": 207,
+      "breakeven": 49,
+      "win_rate_pct": 30.25,
+      "net_r": 15.0,
+      "avg_r": 0.041,
+      "max_drawdown_r": 20.0
+    },
+    {
+      "indicator": "Wammie/Moolah",
+      "setups": 11,
+      "entries": 11,
+      "canceled_setups": 0,
+      "closed_trades": 11,
+      "wins": 4,
+      "losses": 4,
+      "breakeven": 3,
+      "win_rate_pct": 36.36,
+      "net_r": 4.0,
+      "avg_r": 0.364,
+      "max_drawdown_r": 2.0
+    }
+  ]
+}

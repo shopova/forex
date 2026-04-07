@@ -1,0 +1,366 @@
+//@version=6
+strategy("QQE / QMP Method 1 Strategy", overlay=true, pyramiding=0, process_orders_on_close=false, initial_capital=500, currency=currency.EUR, max_labels_count=500)
+
+// Lower-risk execution model for the existing QMP/QQE signal stack:
+// - Reuses the current QMP signal semantics (MACD Platinum + QQE Adv sync)
+// - Defaults to the book's Method No. 1 style (single position, defined stop)
+// - Adds stricter macro/session filters from the repo's execution framework
+
+////////////////////////////////////////////////////////////////////////////////
+// 0) Engine
+
+groupEngine = "0) Engine"
+enableLongs = input.bool(true, "Enable Long Trades", group=groupEngine)
+enableShorts = input.bool(true, "Enable Short Trades", group=groupEngine)
+showSignalMarkers = input.bool(true, "Plot Signal Markers", group=groupEngine)
+showTradeLevels = input.bool(true, "Plot Pending / Active Levels", group=groupEngine)
+showTrendMAs = input.bool(true, "Plot 50 / 100 / 240 Trend MAs", group=groupEngine)
+
+////////////////////////////////////////////////////////////////////////////////
+// 1) QMP Signal Logic
+
+groupQmp = "1) QMP Signal"
+requireTrendStack = input.bool(true, "Require 50/100/240 Trend Stack", group=groupQmp)
+useHigherTimeFrameFilter = input.bool(false, "Use Higher Time Frame QMP Filter", group=groupQmp)
+higherTimeFrame = input.timeframe("D", "Higher Time Frame", group=groupQmp)
+qqeWp = input.float(3.0, "QQE WP", minval=0.5, maxval=10.0, step=0.01, group=groupQmp)
+
+////////////////////////////////////////////////////////////////////////////////
+// 2) Repo Filters
+
+groupFilters = "2) Repo Filters"
+useMacroTrendFilter = input.bool(true, "Use Daily 200 SMA + H4 50 EMA Filter", group=groupFilters)
+dailySmaLen = input.int(200, "Daily SMA Length", minval=50, maxval=400, group=groupFilters)
+h4EmaLen = input.int(50, "4H EMA Length", minval=20, maxval=200, group=groupFilters)
+useSessionFilter = input.bool(true, "Use Session Filter", group=groupFilters)
+tradeSession = input.session("0700-1700", "Trading Session (Exchange Time)", group=groupFilters)
+
+////////////////////////////////////////////////////////////////////////////////
+// 3) Execution
+
+groupExec = "3) Execution"
+entryMode = input.string("Next Bar Open (Book)", "Entry Mode", options=["Next Bar Open (Book)", "Signal Candle Break Stop"], group=groupExec)
+entryOffsetTicks = input.int(2, "Stop Entry Offset (Ticks)", minval=0, maxval=50, group=groupExec)
+entryExpiryBars = input.int(3, "Stop Entry Expiry (Bars)", minval=1, maxval=20, group=groupExec)
+stopMode = input.string("Signal Candle + ATR", "Stop Mode", options=["Signal Candle + ATR", "Recent Swing + ATR", "50 EMA + ATR", "100 EMA + ATR", "240 LWMA + ATR"], group=groupExec)
+swingLookback = input.int(5, "Recent Swing Lookback", minval=2, maxval=50, group=groupExec)
+stopAtrLen = input.int(14, "ATR Length", minval=5, maxval=50, group=groupExec)
+stopAtrMult = input.float(1.0, "ATR Stop Buffer", minval=0.1, maxval=5.0, step=0.1, group=groupExec)
+targetR = input.float(2.0, "R Multiple Target", minval=1.5, maxval=10.0, step=0.1, group=groupExec)
+minRequiredR = input.float(2.0, "Minimum Allowed Target R", minval=1.5, maxval=10.0, step=0.1, group=groupExec)
+
+////////////////////////////////////////////////////////////////////////////////
+// 4) Risk + Exit
+
+groupRisk = "4) Risk + Exit"
+riskPct = input.float(0.50, "Risk Per Trade (% of Equity)", minval=0.05, maxval=2.0, step=0.05, group=groupRisk)
+enableBreakeven = input.bool(true, "Move Stop to Breakeven", group=groupRisk)
+breakevenAtR = input.float(1.0, "Breakeven Trigger (+R)", minval=0.5, maxval=5.0, step=0.1, group=groupRisk)
+exitOnOppositeQmp = input.bool(true, "Exit on Opposite QMP Signal", group=groupRisk)
+exitOnMacdZeroCross = input.bool(false, "Exit on MACD Zero-Line Cross", group=groupRisk)
+
+////////////////////////////////////////////////////////////////////////////////
+// Helpers
+
+barsSinceOrMax(bool condition) =>
+    bars = ta.barssince(condition)
+    na(bars) ? 100000 : bars
+
+calcQtyFromRisk(float entryPx, float stopPx, float riskPercent) =>
+    riskPerUnit = math.abs(entryPx - stopPx)
+    riskCash = strategy.equity * (riskPercent * 0.01)
+    riskPerUnit > 0 ? (riskCash / riskPerUnit) : 0.0
+
+calcLongStop(string selectedMode, float atrValue, float signalLow, int swingLen, float ema50Value, float ema100Value, float wma240Value, float atrMult) =>
+    float candidate = na
+    if selectedMode == "Signal Candle + ATR"
+        candidate := signalLow - (atrValue * atrMult)
+    else if selectedMode == "Recent Swing + ATR"
+        candidate := ta.lowest(low, swingLen) - (atrValue * atrMult)
+    else if selectedMode == "50 EMA + ATR"
+        candidate := ema50Value - (atrValue * atrMult)
+    else if selectedMode == "100 EMA + ATR"
+        candidate := ema100Value - (atrValue * atrMult)
+    else
+        candidate := wma240Value - (atrValue * atrMult)
+    candidate
+
+calcShortStop(string selectedMode, float atrValue, float signalHigh, int swingLen, float ema50Value, float ema100Value, float wma240Value, float atrMult) =>
+    float candidate = na
+    if selectedMode == "Signal Candle + ATR"
+        candidate := signalHigh + (atrValue * atrMult)
+    else if selectedMode == "Recent Swing + ATR"
+        candidate := ta.highest(high, swingLen) + (atrValue * atrMult)
+    else if selectedMode == "50 EMA + ATR"
+        candidate := ema50Value + (atrValue * atrMult)
+    else if selectedMode == "100 EMA + ATR"
+        candidate := ema100Value + (atrValue * atrMult)
+    else
+        candidate := wma240Value + (atrValue * atrMult)
+    candidate
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD Platinum (12, 26, 9)
+
+source = close
+fastLength = 12
+slowLength = 26
+signalLength = 9
+
+ma1 = ta.ema(source, fastLength)
+ma2 = ta.ema(ma1, fastLength)
+zerolagEMA = (2.0 * ma1) - ma2
+
+mas1 = ta.ema(source, slowLength)
+mas2 = ta.ema(mas1, slowLength)
+zerolagslowMA = (2.0 * mas1) - mas2
+
+blueMACD = zerolagEMA - zerolagslowMA
+
+emasig1 = ta.ema(blueMACD, signalLength)
+emasig2 = ta.ema(emasig1, signalLength)
+orgMACD = (2.0 * emasig1) - emasig2
+
+macdBullDot = ta.crossover(blueMACD, orgMACD) and barstate.isconfirmed
+macdBearDot = ta.crossunder(blueMACD, orgMACD) and barstate.isconfirmed
+
+macdBullTrigger = macdBullDot and orgMACD < 0
+macdBearTrigger = macdBearDot and orgMACD > 0
+
+macdBullTriggerBars = barsSinceOrMax(macdBullTrigger)
+macdBearTriggerBars = barsSinceOrMax(macdBearTrigger)
+
+macdLongBias = macdBullTriggerBars < macdBearTriggerBars
+macdShortBias = macdBearTriggerBars < macdBullTriggerBars
+
+////////////////////////////////////////////////////////////////////////////////
+// QQE Adv (1, 8, 3)
+
+rsiPeriod = 8
+sf = 1
+wildersPeriod = rsiPeriod * 2 - 1
+
+rsiValue = ta.rsi(close, rsiPeriod)
+rsiMa = ta.ema(rsiValue, sf)
+
+atrRsi = math.abs(rsiMa[1] - rsiMa)
+maAtrRsi = ta.ema(atrRsi, wildersPeriod)
+dar = ta.ema(maAtrRsi, wildersPeriod) * qqeWp
+
+newShortBand = rsiMa + dar
+float rsi0 = 0.0
+rsi0 := rsiMa[1] < rsi0[1] and rsiMa < rsi0[1] ? math.min(rsi0[1], newShortBand) : newShortBand
+
+newLongBand = rsiMa - dar
+float rsi1 = 0.0
+rsi1 := rsiMa[1] > rsi1[1] and rsiMa > rsi1[1] ? math.max(rsi1[1], newLongBand) : newLongBand
+
+float qqeTrend = 0.0
+qqeTrend := ta.cross(rsiMa, rsi0[1]) ? 1.0 : ta.cross(rsiMa, rsi1[1]) ? -1.0 : nz(qqeTrend[1], 1.0)
+
+secondRsiLine = qqeTrend == 1.0 ? rsi1 : rsi0
+
+qqeLongBias = rsiMa > secondRsiLine
+qqeShortBias = rsiMa < secondRsiLine
+qqeBullCross = ta.crossover(rsiMa, secondRsiLine) and barstate.isconfirmed
+qqeBearCross = ta.crossunder(rsiMa, secondRsiLine) and barstate.isconfirmed
+
+////////////////////////////////////////////////////////////////////////////////
+// QMP sync state
+
+baseLongState = macdLongBias and qqeLongBias
+baseShortState = macdShortBias and qqeShortBias
+
+rawLongSwitch = macdLongBias and qqeBullCross
+rawShortSwitch = macdShortBias and qqeBearCross
+
+////////////////////////////////////////////////////////////////////////////////
+// Trend filters
+
+ema50 = ta.ema(close, 50)
+ema100 = ta.ema(close, 100)
+wma240 = ta.wma(close, 240)
+
+bullishStack = ema50 > ema100 and ema100 > wma240
+bearishStack = ema50 < ema100 and ema100 < wma240
+
+trendAllowsLong = not requireTrendStack or bullishStack
+trendAllowsShort = not requireTrendStack or bearishStack
+
+htfLongState = request.security(syminfo.tickerid, higherTimeFrame, baseLongState, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+htfShortState = request.security(syminfo.tickerid, higherTimeFrame, baseShortState, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+
+htfAllowsLong = not useHigherTimeFrameFilter or htfLongState
+htfAllowsShort = not useHigherTimeFrameFilter or htfShortState
+
+dailyClose = request.security(syminfo.tickerid, "D", close, lookahead=barmerge.lookahead_off)
+dailySma = request.security(syminfo.tickerid, "D", ta.sma(close, dailySmaLen), lookahead=barmerge.lookahead_off)
+h4Close = request.security(syminfo.tickerid, "240", close, lookahead=barmerge.lookahead_off)
+h4Ema = request.security(syminfo.tickerid, "240", ta.ema(close, h4EmaLen), lookahead=barmerge.lookahead_off)
+
+macroAllowsLong = not useMacroTrendFilter or (dailyClose > dailySma and h4Close > h4Ema)
+macroAllowsShort = not useMacroTrendFilter or (dailyClose < dailySma and h4Close < h4Ema)
+
+inSession = not na(time(timeframe.period, tradeSession))
+sessionAllows = not useSessionFilter or inSession
+
+rewardRiskAllowed = targetR >= minRequiredR
+
+rawLongSignal = rawLongSwitch and trendAllowsLong and htfAllowsLong and barstate.isconfirmed
+rawShortSignal = rawShortSwitch and trendAllowsShort and htfAllowsShort and barstate.isconfirmed
+
+longSetup = enableLongs and rawLongSignal and macroAllowsLong and sessionAllows and rewardRiskAllowed
+shortSetup = enableShorts and rawShortSignal and macroAllowsShort and sessionAllows and rewardRiskAllowed
+
+longBlocked = rawLongSwitch and not longSetup
+shortBlocked = rawShortSwitch and not shortSetup
+
+////////////////////////////////////////////////////////////////////////////////
+// Order state
+
+var int pendingDirection = 0
+var bool pendingIsMarket = false
+var float pendingEntryPrice = na
+var float pendingStopPrice = na
+var float pendingQty = na
+var int pendingSignalBar = na
+
+var int activeDirection = 0
+var float activeStopPrice = na
+var float activeTargetPrice = na
+var float activeRiskDistance = na
+
+entryBuffer = syminfo.mintick * entryOffsetTicks
+canQueueOrder = strategy.position_size == 0 and pendingDirection == 0
+
+if canQueueOrder and longSetup
+    float candidateStop = calcLongStop(stopMode, ta.atr(stopAtrLen), low, swingLookback, ema50, ema100, wma240, stopAtrMult)
+    bool useMarketEntry = entryMode == "Next Bar Open (Book)"
+    float referenceEntry = useMarketEntry ? close : high + entryBuffer
+    float candidateQty = calcQtyFromRisk(referenceEntry, candidateStop, riskPct)
+    bool validSetup = not na(candidateStop) and candidateStop < referenceEntry and candidateQty > 0
+    if validSetup
+        pendingDirection := 1
+        pendingIsMarket := useMarketEntry
+        pendingEntryPrice := useMarketEntry ? na : referenceEntry
+        pendingStopPrice := candidateStop
+        pendingQty := candidateQty
+        pendingSignalBar := bar_index
+        if useMarketEntry
+            strategy.entry("QQE Long", strategy.long, qty=candidateQty, comment="QMP Long")
+        else
+            strategy.entry("QQE Long", strategy.long, qty=candidateQty, stop=referenceEntry, comment="QMP Long Stop")
+
+if canQueueOrder and shortSetup
+    float candidateStop = calcShortStop(stopMode, ta.atr(stopAtrLen), high, swingLookback, ema50, ema100, wma240, stopAtrMult)
+    bool useMarketEntry = entryMode == "Next Bar Open (Book)"
+    float referenceEntry = useMarketEntry ? close : low - entryBuffer
+    float candidateQty = calcQtyFromRisk(referenceEntry, candidateStop, riskPct)
+    bool validSetup = not na(candidateStop) and candidateStop > referenceEntry and candidateQty > 0
+    if validSetup
+        pendingDirection := -1
+        pendingIsMarket := useMarketEntry
+        pendingEntryPrice := useMarketEntry ? na : referenceEntry
+        pendingStopPrice := candidateStop
+        pendingQty := candidateQty
+        pendingSignalBar := bar_index
+        if useMarketEntry
+            strategy.entry("QQE Short", strategy.short, qty=candidateQty, comment="QMP Short")
+        else
+            strategy.entry("QQE Short", strategy.short, qty=candidateQty, stop=referenceEntry, comment="QMP Short Stop")
+
+if strategy.position_size == 0 and pendingDirection != 0 and not pendingIsMarket and not na(pendingSignalBar) and bar_index - pendingSignalBar > entryExpiryBars
+    strategy.cancel(pendingDirection == 1 ? "QQE Long" : "QQE Short")
+    pendingDirection := 0
+    pendingIsMarket := false
+    pendingEntryPrice := na
+    pendingStopPrice := na
+    pendingQty := na
+    pendingSignalBar := na
+
+newLongFill = strategy.position_size > 0 and strategy.position_size[1] <= 0
+newShortFill = strategy.position_size < 0 and strategy.position_size[1] >= 0
+
+if newLongFill
+    activeDirection := 1
+    activeStopPrice := pendingStopPrice
+    if not na(activeStopPrice) and activeStopPrice >= strategy.position_avg_price
+        activeStopPrice := strategy.position_avg_price - syminfo.mintick
+    activeRiskDistance := math.abs(strategy.position_avg_price - activeStopPrice)
+    activeTargetPrice := strategy.position_avg_price + (activeRiskDistance * targetR)
+    pendingDirection := 0
+    pendingIsMarket := false
+    pendingEntryPrice := na
+    pendingStopPrice := na
+    pendingQty := na
+    pendingSignalBar := na
+
+if newShortFill
+    activeDirection := -1
+    activeStopPrice := pendingStopPrice
+    if not na(activeStopPrice) and activeStopPrice <= strategy.position_avg_price
+        activeStopPrice := strategy.position_avg_price + syminfo.mintick
+    activeRiskDistance := math.abs(strategy.position_avg_price - activeStopPrice)
+    activeTargetPrice := strategy.position_avg_price - (activeRiskDistance * targetR)
+    pendingDirection := 0
+    pendingIsMarket := false
+    pendingEntryPrice := na
+    pendingStopPrice := na
+    pendingQty := na
+    pendingSignalBar := na
+
+if strategy.position_size > 0 and activeDirection == 1 and not na(activeStopPrice) and not na(activeTargetPrice)
+    float effectiveStop = activeStopPrice
+    bool breakevenReady = enableBreakeven and not na(activeRiskDistance) and high >= strategy.position_avg_price + (activeRiskDistance * breakevenAtR)
+    if breakevenReady
+        effectiveStop := math.max(effectiveStop, strategy.position_avg_price)
+    strategy.exit("QQE Long Exit", from_entry="QQE Long", stop=effectiveStop, limit=activeTargetPrice)
+
+if strategy.position_size < 0 and activeDirection == -1 and not na(activeStopPrice) and not na(activeTargetPrice)
+    float effectiveStop = activeStopPrice
+    bool breakevenReady = enableBreakeven and not na(activeRiskDistance) and low <= strategy.position_avg_price - (activeRiskDistance * breakevenAtR)
+    if breakevenReady
+        effectiveStop := math.min(effectiveStop, strategy.position_avg_price)
+    strategy.exit("QQE Short Exit", from_entry="QQE Short", stop=effectiveStop, limit=activeTargetPrice)
+
+longOppositeExit = strategy.position_size > 0 and exitOnOppositeQmp and rawShortSignal
+shortOppositeExit = strategy.position_size < 0 and exitOnOppositeQmp and rawLongSignal
+longMacdZeroExit = strategy.position_size > 0 and exitOnMacdZeroCross and ta.crossunder(orgMACD, 0.0)
+shortMacdZeroExit = strategy.position_size < 0 and exitOnMacdZeroCross and ta.crossover(orgMACD, 0.0)
+
+if longOppositeExit or longMacdZeroExit
+    strategy.close("QQE Long", comment=longOppositeExit ? "Opposite QMP" : "MACD Zero")
+
+if shortOppositeExit or shortMacdZeroExit
+    strategy.close("QQE Short", comment=shortOppositeExit ? "Opposite QMP" : "MACD Zero")
+
+if strategy.position_size == 0 and strategy.position_size[1] != 0
+    activeDirection := 0
+    activeStopPrice := na
+    activeTargetPrice := na
+    activeRiskDistance := na
+
+////////////////////////////////////////////////////////////////////////////////
+// Plots
+
+plot(showTrendMAs ? ema50 : na, color=color.orange, linewidth=1, title="50 EMA")
+plot(showTrendMAs ? ema100 : na, color=color.purple, linewidth=1, title="100 EMA")
+plot(showTrendMAs ? wma240 : na, color=color.gray, linewidth=1, title="240 LWMA")
+
+plot(showTradeLevels and pendingDirection != 0 and not pendingIsMarket ? pendingEntryPrice : na, color=color.new(color.blue, 0), linewidth=2, style=plot.style_linebr, title="Pending Entry")
+plot(showTradeLevels and pendingDirection != 0 ? pendingStopPrice : na, color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr, title="Pending Stop")
+plot(showTradeLevels and strategy.position_size != 0 ? activeStopPrice : na, color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr, title="Active Stop")
+plot(showTradeLevels and strategy.position_size != 0 ? activeTargetPrice : na, color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr, title="Active Target")
+
+plotshape(showSignalMarkers and longSetup, title="QQE Long Setup", style=shape.circle, location=location.belowbar, color=#39ff14, size=size.tiny)
+plotshape(showSignalMarkers and shortSetup, title="QQE Short Setup", style=shape.circle, location=location.abovebar, color=color.red, size=size.tiny)
+plotshape(showSignalMarkers and longBlocked, title="QQE Long Blocked", style=shape.xcross, location=location.belowbar, color=color.yellow, size=size.tiny)
+plotshape(showSignalMarkers and shortBlocked, title="QQE Short Blocked", style=shape.xcross, location=location.abovebar, color=color.yellow, size=size.tiny)
+
+////////////////////////////////////////////////////////////////////////////////
+// Alerts
+
+alertcondition(longSetup, title="QQE Long Setup", message="QQE/QMP long setup confirmed on candle close.")
+alertcondition(shortSetup, title="QQE Short Setup", message="QQE/QMP short setup confirmed on candle close.")
+alertcondition(longBlocked, title="QQE Long Blocked", message="Raw QQE/QMP long sync detected but blocked by strategy filters.")
+alertcondition(shortBlocked, title="QQE Short Blocked", message="Raw QQE/QMP short sync detected but blocked by strategy filters.")

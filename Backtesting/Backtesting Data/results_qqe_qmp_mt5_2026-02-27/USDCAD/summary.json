@@ -1,0 +1,21 @@
+{
+  "source_csv": "Backtesting Data/USDCAD_H1_2020-2026-02-23.csv",
+  "bars": 38247,
+  "start": "2020-01-02T01:00:00+00:00",
+  "end": "2026-02-23T19:00:00+00:00",
+  "mintick": 1e-05,
+  "result": {
+    "indicator": "QQE/QMP",
+    "setups": 268,
+    "entries": 268,
+    "canceled_setups": 0,
+    "closed_trades": 268,
+    "wins": 67,
+    "losses": 142,
+    "breakeven": 59,
+    "win_rate_pct": 25.0,
+    "net_r": -8.0,
+    "avg_r": -0.03,
+    "max_drawdown_r": 36.0
+  }
+}

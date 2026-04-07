@@ -1,0 +1,164 @@
+//@version=6
+indicator("QMP Filter Indicator", shorttitle="QMP Indicator", overlay=true)
+
+// The QMP Filter is the sync condition between MACD Platinum and QQE Adv.
+// This keeps the current book-aligned behavior, upgraded to Pine v6:
+// - trend is defined by 50 EMA / 100 EMA / 240 LWMA stacking
+// - long setups require a MACD bull dot below zero, then a QQE bullish cross
+// - short setups require a MACD bear dot above zero, then a QQE bearish cross
+// - raw QMP dots always plot; strict filters mark them as allowed or blocked
+// - QMP dots confirm only on closed candles
+
+////////////////////////////////////////////////////////////////////////////////
+// Inputs
+
+requireTrendStack = input.bool(true, "Require MA Trend Stack")
+useHigherTimeFrameFilter = input.bool(false, "Use Higher Time Frame Filter")
+higherTimeFrame = input.timeframe("D", "Higher Time Frame")
+showMovingAverages = input.bool(true, "Show Trend Moving Averages")
+showHigherTimeFrameArrows = input.bool(true, "Show Higher Time Frame Arrows")
+WP = input.float(3.0, "QQE WP", step=0.01)
+
+////////////////////////////////////////////////////////////////////////////////
+// Helpers
+
+barsSinceOrMax(bool condition) =>
+    bars = ta.barssince(condition)
+    na(bars) ? 100000 : bars
+
+////////////////////////////////////////////////////////////////////////////////
+// MACD Platinum (12, 26, 9)
+
+source = close
+fastLength = 12
+slowLength = 26
+signalLength = 9
+
+ma1 = ta.ema(source, fastLength)
+ma2 = ta.ema(ma1, fastLength)
+zerolagEMA = (2.0 * ma1) - ma2
+
+mas1 = ta.ema(source, slowLength)
+mas2 = ta.ema(mas1, slowLength)
+zerolagslowMA = (2.0 * mas1) - mas2
+
+blueMACD = zerolagEMA - zerolagslowMA
+
+emasig1 = ta.ema(blueMACD, signalLength)
+emasig2 = ta.ema(emasig1, signalLength)
+orgMACD = (2.0 * emasig1) - emasig2
+
+macdBullDot = ta.crossover(blueMACD, orgMACD) and barstate.isconfirmed
+macdBearDot = ta.crossunder(blueMACD, orgMACD) and barstate.isconfirmed
+
+// Book rule: buy-side MACD dots should form below zero; sell-side above zero.
+macdBullTrigger = macdBullDot and orgMACD < 0
+macdBearTrigger = macdBearDot and orgMACD > 0
+
+macdBullTriggerBars = barsSinceOrMax(macdBullTrigger)
+macdBearTriggerBars = barsSinceOrMax(macdBearTrigger)
+
+macdLongBias = macdBullTriggerBars < macdBearTriggerBars
+macdShortBias = macdBearTriggerBars < macdBullTriggerBars
+
+////////////////////////////////////////////////////////////////////////////////
+// QQE Adv (1, 8, 3)
+
+RSIPeriod = 8
+SF = 1
+WildersPeriod = RSIPeriod * 2 - 1
+
+rsiValue = ta.rsi(close, RSIPeriod)
+RsiMa = ta.ema(rsiValue, SF)
+
+AtrRsi = math.abs(RsiMa[1] - RsiMa)
+MaAtrRsi = ta.ema(AtrRsi, WildersPeriod)
+dar = ta.ema(MaAtrRsi, WildersPeriod) * WP
+
+newShortBand = RsiMa + dar
+float rsi0 = 0.0
+rsi0 := RsiMa[1] < rsi0[1] and RsiMa < rsi0[1] ? math.min(rsi0[1], newShortBand) : newShortBand
+
+newLongBand = RsiMa - dar
+float rsi1 = 0.0
+rsi1 := RsiMa[1] > rsi1[1] and RsiMa > rsi1[1] ? math.max(rsi1[1], newLongBand) : newLongBand
+
+float trend = 0.0
+trend := ta.cross(RsiMa, rsi0[1]) ? 1.0 : ta.cross(RsiMa, rsi1[1]) ? -1.0 : nz(trend[1], 1.0)
+
+secondRSILine = trend == 1.0 ? rsi1 : rsi0
+
+qqeLongBias = RsiMa > secondRSILine
+qqeShortBias = RsiMa < secondRSILine
+qqeBullCross = ta.crossover(RsiMa, secondRSILine) and barstate.isconfirmed
+qqeBearCross = ta.crossunder(RsiMa, secondRSILine) and barstate.isconfirmed
+
+////////////////////////////////////////////////////////////////////////////////
+// QMP sync state
+
+baseLongState = macdLongBias and qqeLongBias
+baseShortState = macdShortBias and qqeShortBias
+
+rawLongSwitch = macdLongBias and qqeBullCross
+rawShortSwitch = macdShortBias and qqeBearCross
+
+////////////////////////////////////////////////////////////////////////////////
+// Trend filter (50 EMA / 100 EMA / 240 LWMA)
+
+ema50 = ta.ema(close, 50)
+ema100 = ta.ema(close, 100)
+wma240 = ta.wma(close, 240)
+
+bullishStack = ema50 > ema100 and ema100 > wma240
+bearishStack = ema50 < ema100 and ema100 < wma240
+
+trendAllowsLong = not requireTrendStack or bullishStack
+trendAllowsShort = not requireTrendStack or bearishStack
+
+////////////////////////////////////////////////////////////////////////////////
+// Higher time frame QMP confirmation
+
+htfLongState = request.security(syminfo.tickerid, higherTimeFrame, baseLongState, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+htfShortState = request.security(syminfo.tickerid, higherTimeFrame, baseShortState, gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_off)
+
+htfLongStateInt = htfLongState ? 1 : 0
+htfShortStateInt = htfShortState ? 1 : 0
+
+htfLongSwitch = useHigherTimeFrameFilter and htfLongState and ta.change(htfLongStateInt) == 1
+htfShortSwitch = useHigherTimeFrameFilter and htfShortState and ta.change(htfShortStateInt) == 1
+
+htfAllowsLong = not useHigherTimeFrameFilter or htfLongState
+htfAllowsShort = not useHigherTimeFrameFilter or htfShortState
+
+////////////////////////////////////////////////////////////////////////////////
+// Final signals
+
+upSwitch = rawLongSwitch and trendAllowsLong and htfAllowsLong and barstate.isconfirmed
+downSwitch = rawShortSwitch and trendAllowsShort and htfAllowsShort and barstate.isconfirmed
+
+longBlocked = rawLongSwitch and not upSwitch
+shortBlocked = rawShortSwitch and not downSwitch
+
+////////////////////////////////////////////////////////////////////////////////
+// Plots
+
+plotshape(rawLongSwitch, title="QMP Buy", style=shape.circle, location=location.belowbar, color=upSwitch ? #39ff14 : color.yellow, size=size.tiny)
+plotshape(rawShortSwitch, title="QMP Sell", style=shape.circle, location=location.abovebar, color=downSwitch ? color.red : color.yellow, size=size.tiny)
+
+plotchar(showHigherTimeFrameArrows and htfLongSwitch, title="HTF Bull Bias", char="^", color=color.yellow, location=location.belowbar, size=size.tiny)
+plotchar(showHigherTimeFrameArrows and htfShortSwitch, title="HTF Bear Bias", char="v", color=color.yellow, location=location.abovebar, size=size.tiny)
+
+plot(showMovingAverages ? ema50 : na, color=color.orange, linewidth=1, title="50 EMA")
+plot(showMovingAverages ? ema100 : na, color=color.purple, linewidth=1, title="100 EMA")
+plot(showMovingAverages ? wma240 : na, color=color.gray, linewidth=1, title="240 LWMA")
+
+////////////////////////////////////////////////////////////////////////////////
+// Alerts
+
+tradableSignal = upSwitch or downSwitch
+
+alertcondition(tradableSignal, title="QMP Signal", message="Tradable QMP signal confirmed on candle close. Check chart for BUY or SELL direction.")
+alertcondition(upSwitch, title="QMP Buy", message="Trend-aligned QMP BUY confirmed on candle close.")
+alertcondition(downSwitch, title="QMP Sell", message="Trend-aligned QMP SELL confirmed on candle close.")
+alertcondition(longBlocked, title="QMP Buy Blocked", message="Raw QMP BUY sync detected but blocked by trend or higher-time-frame filter.")
+alertcondition(shortBlocked, title="QMP Sell Blocked", message="Raw QMP SELL sync detected but blocked by trend or higher-time-frame filter.")
