@@ -119,9 +119,10 @@
     
 ### Wednesday 8 April
 
-- `EURUSD`
-- `USDJPY`
-- `GBPUSD`
+- `EURUSD` - The pair is in a macro-driven bullish breakout after the April 8, 2026 Iran truce headlines weakened the dollar and pushed oil lower. The daily bias is neutral to bullish, with strong short-term bullish pressure inside the broader range. On the `30m`, price broke strongly above the prior structure and is holding above `1.16285`. My base case is continued hold above the breakout zone, with room first toward `1.17403` and then `1.17937`. A retest of `1.16285` would likely weaken the short-term news-driven impulse, even if the broader bullish structure remains intact. A failed retest back below the breakout zone would weaken the move materially. For today, this is still a no-trade market because the move is news-led and extended.
+- `USDJPY` - The pair is in a strong short-term drop and is reacting from a minor intraday level around `158.046`, but for now this looks like a local bounce rather than a confirmed reversal. A broader dollar-strength scenario is possible in the coming days, but that remains only a watchlist idea until it is confirmed by `DXY`, `Brent`, and the major USD pair charts. For now, this is an observation market, not a trade.
+- `GBPUSD` - The pair is in a similar condition to `EURUSD`. The macro-driven move remains bullish, and price is now approaching the next important resistance around `1.34671`. The move looks extended and may be losing momentum, but there is no clean reversal signal yet. The exit on the previous short was correct, and this is a no-trade market for now.
+- `Mentor note` - Good work today. The common theme across all three pairs is restraint after a macro shock. `EURUSD` and `GBPUSD` are both news-driven bullish moves, but neither offers a clean real-money entry after extension. `USDJPY` is stretched down and only bouncing locally, which is not enough to justify a reversal trade. The quality of today’s process is that you separated market understanding from the need to participate.
 
 ### Thursday 9 April
 
