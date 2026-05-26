@@ -40,8 +40,9 @@
 - Target: 1.18992
 - Projected R: 2.0R
 - Invalidation type: Above defended high
-- Planned risk %:
-- Planned account risk amount:
+- Planned risk %: 0.25%
+- Planned account risk amount: $250
+- Suggested lot size: 0.67 lots
 
 ## Trade Quality Check
 - Setup strength: C
@@ -70,7 +71,7 @@
 ## Outcome
 - Result: Loss
 - Closed R: -1.0R
-- Closed PnL:
+- Closed PnL: -$247.23
 - Exit reason: Stop hit
 - Process vs result: Bad process, bad result
 

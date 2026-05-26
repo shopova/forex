@@ -151,21 +151,39 @@
 
 ### Wednesday 15 April
 
-- `EURUSD`
+- `EURUSD` - EURUSD remains short-term bullish after the macro-driven move, but price is now rotating under the new 30m ceiling at `1.17225`. I want to see acceptance back below that ceiling and a move toward support, likely into next week, before I consider whether a cleaner setup is forming. For now, this is only a candidate for next week after structure clarifies, not a near-entry trade.
 - `USDJPY`
-- `GBPUSD`
+- `GBPUSD` - GBPUSD is showing acceptance below the current 30m ceiling and is compressing. I do not want to treat the triangle shape itself as the signal. What matters is that momentum has cooled and the market may need a retest next week before any cleaner directional continuation appears. For now, this is a no-trade market.
 
 ### Thursday 16 April
 
-- `EURUSD`
+- `EURUSD` - EURUSD reached the `1.17937` resistance zone but failed to achieve clean acceptance above it. The move has turned `neutral-to-bearish` on `30m`, while the daily chart remains inside the broader range. `DXY` is showing some stabilization, which supports the possibility of a corrective move lower, but the market is still macro-sensitive and headline-driven. For now this is a `no-trade` market. I want to see clear acceptance either below or above `1.17937` before judging the next leg.
+
+  - active upper resistance / target: 1.17937
+  - nearby upper resistance extension: 1.17995
+  - reclaimed breakout zone: 1.17098 - 1.17225
+  - first deeper support if correction unfolds: 1.16285
+  - lower supports from earlier structure: 1.15715, 1.15507, 1.15092
+  - larger swing origin mentioned in analysis: 1.14441
+
 - `USDJPY`
-- `GBPUSD`
+- `GBPUSD`- GBPUSD is cooling after a strong bullish leg and is now compressing around the `1.35538 - 1.35875` resistance zone. The `30m` chart formed a new local resistance at `1.35875`, which also acted as a turning point in February, so this zone is now the active decision area. The daily chart remains within the larger range, and the current move has lost its clean expansion character. Acceptance above the zone would strengthen the bullish continuation case toward `1.38462`. Rejection and acceptance back below the zone would make `1.34749` the nearest downside target, with `1.33370` relevant only if that level also fails. For now this is a no-trade market.
+
+- active resistance zone: 1.35538 - 1.35875
+  - first downside target if rejection is accepted: 1.34749
+  - second downside target only if that fails: 1.33370
+  - larger upside resistance if acceptance above the zone occurs: 1.38462
+
 
 ### Friday 17 April
 
-- `EURUSD`
+- `EURUSD` - EURUSD remains a no-trade market. The bullish impulse has cooled after reaching 1.17937, but the rejection has not yet turned into a clean bearish move. Price is now retesting the same resistance zone, which makes this a decision area rather than a setup. The next meaningful clue will be whether the market accepts back below 1.17937 or reclaims it. In the current macro-sensitive Friday environment, I prefer observation over participation.
+
+- active decision / resistance zone: 1.17937
+- if rejection is accepted, first downside target zone: 1.17225 - 1.17098
+- deeper corrective support: 1.16285
 - `USDJPY`
-- `GBPUSD`
+- `GBPUSD` 
 
 ## Week 20-26 April 2026
 ### Monday 20 April
@@ -176,27 +194,29 @@
 
 ### Tuesday 21 April
 
-- `EURUSD`
+- `EURUSD` - offered a valid short continuation after failing to regain the 1.17937 resistance zone. The lower high around 1.17820 was the key decision point. The cleaner entry was not the level itself, but the rejection and renewe acceptance lower after that lower high formed. The downside path toward 1.17225 was valid.
 - `USDJPY`
 - `GBPUSD`
 
 ### Wednesday 22 April
 
-- `EURUSD`
+- `EURUSD` -   EURUSD is weakening under the 1.17937 resistance area and may be forming a lower high on the daily chart. The 30m structure has softened, but I still need clear acceptance below 1.17225
+  before treating the move as a valid short continuation. DXY is stabilizing while Brent and Gold remain relatively steady, so the macro picture is still mixed and headline-sensitive. If
+  1.17225 rejects price cleanly, a tactical long back toward 1.17937 is possible with a tight stop, but for now I remain in observation mode until structure confirms.
 - `USDJPY`
 - `GBPUSD`
 
 ### Thursday 23 April
 
-- `EURUSD`
-- `USDJPY`
-- `GBPUSD`
+- `EURUSD` -  EURUSD is losing momentum after failing to sustain the move near `1.17937`. The 30m structure has turned neutral-to-mildly bearish and is now pressing toward the key `1.17225` level. DXY is stabilizing, while Gold and Brent are relatively steady, so the macro picture is mixed but no longer clearly supportive of further EURUSD upside. A valid short continuation would require real acceptance below 1.17225, opening the path toward `1.16285`. If 1.17225 rejects price cleanly, the correction is not yet confirmed. For now, this remains a no-trade market until structure becomes clearer.
+- `USDJPY` - USDJPY is pressing the `159.671` resistance area with improving momentum, but the pair is too close to the next major level at `160.378` to offer an attractive trade. The market is strong enough to continue higher if `159.671` is accepted, but the remaining upside is limited and uncertain. This makes it a poor-quality chase setup. For now, this is a no-trade market.
+- `GBPUSD` - GBPUSD appears to be in a corrective phase on the daily chart, while the `30m` remains range-bound and lacks momentum. The key nearby decision level is `1.34749`. A clean acceptance below that level would strengthen the bearish corrective case toward `1.33370`, while renewed strength back toward `1.35538 - 1.35875` would suggest the correction is shallow. For now, the pair is moving without enough momentum to justify a trade, so this remains a no-trade market.
 
 ### Friday 24 April
 
-- `EURUSD`
-- `USDJPY`
-- `GBPUSD`
+- `EURUSD`: EURUSD is weakening under the `1.17937` resistance area and may be forming a lower high on the daily chart. The `30m` structure has softened, but I still need clear acceptance below `1.17225` before treating the move as a valid short continuation. `DXY` is stabilizing while `Brent` and `Gold` remain relatively steady, so the macro picture is still mixed and headline-sensitive. If `1.17225` rejects price cleanly, a tactical long back toward `1.17937` is possible with a tight stop, but for now I remain in observation mode until structure confirms.
+- `USDJPY`: 
+- `GBPUSD`: 
 
 ## Week 27 April - 3 May 2026
 ### Monday 27 April
@@ -213,7 +233,20 @@
 
 ### Wednesday 29 April
 
-- `EURUSD`
+- `EURUSD` - `Market Read Summary`
+
+  EURUSD was sitting in the middle of the broader daily range, not at an edge. Price was also near the middle of the Keltner structure across Daily, 4H, and 30m, with the daily SMA flat and
+  price trading between key levels on all three timeframes. That suggested balance, not directional edge. My refined read was: Daily neutral / rotational, 4H mildly bearish to neutral, 30m
+  flat and noisy. With the Federal Funds Rate announcement due at 9:00 p.m. Sofia time on April 29, 2026, the technical balance and event risk both pointed to the same conclusion: no clean
+  trade before the Fed.
+
+  `Self-Assessment Summary`
+
+  I did well because I recognized the absence of edge instead of forcing a setup. I correctly used Daily / 4H / 30m, noticed the flat daily SMA, the mid-range location, and the fact that
+  price was trapped between meaningful levels. I also connected that technical balance with the Fed event risk and did not overread lower-timeframe movement. The main refinement is to
+  describe the daily condition more precisely as neutral / rotational rather than simply bullish but correcting. Overall, this was a good example of selectivity and disciplined no-trade
+  judgment.
+
 - `USDJPY`
 - `GBPUSD`
 

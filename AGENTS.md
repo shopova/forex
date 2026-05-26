@@ -19,22 +19,22 @@ This directory is a strategy knowledge base for designing, validating, and autom
 - `Legacy/Initial-strategy-files/Trade Journal - Journal.csv`  
   Historical results for validation, error analysis, and rule refinement.
 
-- `Legacy/Initial-strategy-files/Daily Forex Trading Routine.md`  
+- `2026 Action Plan/01 Trading Desk/Daily Forex Trading Routine.md`  
   Session-by-session operating routine for preparation, execution, and review.
 
-- `2026 Action Plan/Six Month Trading Plan 2026.md`  
+- `2026 Action Plan/02 Strategy and Planning/Six Month Trading Plan 2026.md`  
   Six-month roadmap for the current rebuild phase, covering study, backtesting, forward testing, and progression criteria.
 
-- `2026 Action Plan/MT5 Session Model Alert EA README.md`  
+- `2026 Action Plan/02 Strategy and Planning/MT5 Session Model Alert EA README.md`  
   Installation, chart-markup, and usage guide for the current `EURUSD 30m` MT5 session-model alert EA.
 
 - `Legacy/Initial-strategy-files/Drawdown & Psychology Rules.pdf`  
   Hard behavioral and drawdown controls that override setup discretion when needed.
 
-- `Legacy/Initial-strategy-files/Clean Slate FX Strategy v2 - Session Model.md`  
+- `2026 Action Plan/02 Strategy and Planning/Clean Slate FX Strategy v2 - Session Model.md`  
   Current clean-slate strategy direction for the part-time session-trading model.
 
-- `2026 Action Plan/Daily Journal.md`  
+- `2026 Action Plan/03 Journal and Trade Reviews/Daily Journal.md`  
   Current day-by-day market-observation and planning journal for the active 2026 process.
 
 ## Legacy Documents
@@ -176,12 +176,12 @@ This directory is a strategy knowledge base for designing, validating, and autom
 4. For Last Kiss work, review `Legacy/Initial-strategy-files/Indicators/Last Kiss/README.md` before modifying implementation logic; there is no standalone active Last Kiss note file in the current workspace.
 5. For Big Shadow work, review `Legacy/Initial-strategy-files/Indicators/Big Shadow/README.md` and `Reading Materials/The big shadow.md` before modifying implementation logic.
 6. For Wammie/Moolah work, review `Legacy/Initial-strategy-files/Indicators/Wammie Moolah/README.md` before modifying implementation logic.
-7. For strategy-design or study-work requests, prioritize `Legacy/Initial-strategy-files/Clean Slate FX Strategy v2 - Session Model.md`, `Book Notes/Guidelines/reading_first_roadmap_2026.md`, and `Book Notes/Guidelines/12_week_edge_curriculum_2026.md`.
+7. For strategy-design or study-work requests, prioritize `2026 Action Plan/02 Strategy and Planning/Clean Slate FX Strategy v2 - Session Model.md`, `Book Notes/Guidelines/reading_first_roadmap_2026.md`, and `Book Notes/Guidelines/12_week_edge_curriculum_2026.md`.
 8. For QQE / QMP work, read `Legacy/Initial-strategy-files/Indicators/QQE Strategy/MT4_MT5 High Probability Forex Trading Method.md` first and treat it as the detailed rule source for that method.
 9. Keep Python backtest defaults aligned with the Pine defaults they are intended to mirror.
 10. If changing cross-setup execution or shared risk logic, review `Legacy/Initial-strategy-files/Indicators/Combined Strategy/three_setups_strategy_v6.pine` and keep its shared behavior consistent with the individual setup modules.
 11. For archived live-session execution support or risk-blocking automation, review `Legacy/news_risk_monitor/README.md` and keep any changes aligned with its local config and archived workflow.
-12. For the current MT5 session-model EA workflow, review `2026 Action Plan/MT5 Session Model Alert EA README.md` and `Legacy/Initial-strategy-files/Indicators/Combined Strategy/session_model_alert_ea_mt5.mq5` before changing live alert logic, chart-markup rules, or session defaults.
+12. For the current MT5 session-model EA workflow, review `2026 Action Plan/02 Strategy and Planning/MT5 Session Model Alert EA README.md` and `Legacy/Initial-strategy-files/Indicators/Combined Strategy/session_model_alert_ea_mt5.mq5` before changing live alert logic, chart-markup rules, or session defaults.
 
 ## Strategy-to-Indicator Scope
 Automation work (for example Pine Script) should represent the full strategy stack:
@@ -239,7 +239,7 @@ Current QQE / QMP baseline (book-aligned, repo-constrained):
 - For Python QQE / QMP validation, report results per pair rather than as a single aggregate and include at minimum closed trades, win rate, and net `R`.
 
 Current strategic priority:
-- The active strategy-design direction is the clean-slate part-time session model in `Legacy/Initial-strategy-files/Clean Slate FX Strategy v2 - Session Model.md`.
+- The active strategy-design direction is the clean-slate part-time session model in `2026 Action Plan/02 Strategy and Planning/Clean Slate FX Strategy v2 - Session Model.md`.
 - Current MT5 automation priority is the semi-automatic FTMO/demo session-model alert EA for the allowed major-pair shortlist, not full autonomous trade discovery.
 - QQE / QMP materials remain in the repo, but they are no longer a default focus unless the user explicitly asks for them.
 
@@ -275,5 +275,5 @@ Big Shadow backtesting policy:
 - Keep Wammie/Moolah-related files inside `Legacy/Initial-strategy-files/Indicators/Wammie Moolah/`.
 - Keep QQE / QMP-related files inside `Legacy/Initial-strategy-files/Indicators/QQE Strategy/`.
 - Keep combined execution logic inside `Legacy/Initial-strategy-files/Indicators/Combined Strategy/`.
-- Keep the MT5 session-model alert EA and closely related docs aligned between `Legacy/Initial-strategy-files/Indicators/Combined Strategy/session_model_alert_ea_mt5.mq5` and `2026 Action Plan/MT5 Session Model Alert EA README.md`.
+- Keep the MT5 session-model alert EA and closely related docs aligned between `Legacy/Initial-strategy-files/Indicators/Combined Strategy/session_model_alert_ea_mt5.mq5` and `2026 Action Plan/02 Strategy and Planning/MT5 Session Model Alert EA README.md`.
 - Keep archived news-risk monitoring files inside `Legacy/news_risk_monitor/`.

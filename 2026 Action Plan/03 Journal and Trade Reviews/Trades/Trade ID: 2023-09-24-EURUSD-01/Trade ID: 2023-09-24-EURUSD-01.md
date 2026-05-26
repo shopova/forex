@@ -34,8 +34,9 @@
 - Stop: 1.17954
 - Target: 1.17103
 - Projected R: `2.0R`
-- Planned risk %:
-- Planned account risk amount:
+- Planned risk %: `0.25%`
+- Planned account risk amount: `$250`
+- Suggested lot size: `0.90 lots`
 
 ## Trade Quality Check
 - Is higher-timeframe bias clear? Yes
@@ -61,7 +62,7 @@
 ## Outcome
 - Result: `Win`
 - Closed R: `2.0R`
-- Closed PnL:
+- Closed PnL: `+$518.40`
 - Exit reason: Target hit
 
 ## Self-Review

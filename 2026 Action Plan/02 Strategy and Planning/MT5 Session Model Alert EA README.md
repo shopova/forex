@@ -47,9 +47,9 @@ It does **not** place trades automatically in `v1`.
 
 This EA is aligned with:
 
-- `2026 Action Plan/Six Month Trading Plan 2026.md`
-- `Initial-strategy-files/Clean Slate FX Strategy v2 - Session Model.md`
-- `2026 Action Plan/Daily Journal.md`
+- `2026 Action Plan/02 Strategy and Planning/Six Month Trading Plan 2026.md`
+- `2026 Action Plan/02 Strategy and Planning/Clean Slate FX Strategy v2 - Session Model.md`
+- `2026 Action Plan/03 Journal and Trade Reviews/Daily Journal.md`
 
 Main logic:
 

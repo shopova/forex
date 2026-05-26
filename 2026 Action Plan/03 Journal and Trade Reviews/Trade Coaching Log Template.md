@@ -33,6 +33,29 @@ For coaching, send:
 - marked key levels
 - any relevant news context
 
+## Key Level Maintenance Rules
+
+Use structure, not time, as the main rule.
+
+- `Daily` levels:
+  - keep them stable
+  - review them every weekend
+  - update only after a major new swing, a decisive break that no longer acts as support or resistance, or a clearly more important daily turning point
+- `4H` levels:
+  - review them every few days and before each trading week
+  - update when a clear `4H` swing forms, an old level loses relevance, or a support/resistance flip becomes more tradable than the older reference
+- `30m` levels:
+  - treat them as tactical execution levels
+  - update them often: at session prep, after a meaningful impulse, or after a clear reclaim / failed break / consolidation edge forms
+- Remove or downgrade levels when:
+  - price trades through them repeatedly
+  - they sit in the middle of noisy range action
+  - newer structure has clearly overtaken them
+- Keep the map clean:
+  - `Daily` and `4H` levels define the structure
+  - `30m` levels refine execution inside that structure
+  - do not keep old levels only because they mattered once
+
 ## Trade Template
 
 ```md
@@ -118,6 +141,7 @@ For coaching, send:
   `Break of opposing pivot`
 - Planned risk %:
 - Planned account risk amount:
+- Suggested lot size:
 
 ## Trade Quality Check
 - Setup strength:
@@ -225,7 +249,8 @@ For coaching, send:
 - Projected R: 2.0R
 - Invalidation type: Failed reclaim
 - Planned risk %: 0.25%
-- Planned account risk amount: 250
+- Planned account risk amount: $250
+- Suggested lot size: 0.60 lots
 
 ## Trade Quality Check
 - Setup strength: B

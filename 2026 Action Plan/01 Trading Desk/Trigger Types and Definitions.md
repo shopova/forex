@@ -44,10 +44,10 @@ Not enough by itself:
 
 Books / notes:
 
-- [Chapter_6_failure_test.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_failure_test.md)
-- [Chapter_6_failed_breakouts.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_failed_breakouts.md)
-- [Chapter_5_breakout_trade_trading_range_to_trend.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_5_breakout_trade_trading_range_to_trend.md)
-- [last_kiss.md](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/some-investment-books/books/last_kiss.md)
+- [Failure Test Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_failure_test.md)
+- [Failed Breakouts Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_failed_breakouts.md)
+- [Trading Range To Trend Breakout Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_5_breakout_trade_trading_range_to_trend.md)
+- [Last Kiss Reference](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/some-investment-books/books/last_kiss.md)
 
 ### 2. Micro Structure Break
 
@@ -77,10 +77,10 @@ Not enough by itself:
 
 Books / notes:
 
-- [Chapter_6_pullback_entering_lower_time_frame_breakout.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_pullback_entering_lower_time_frame_breakout.md)
-- [Chapter_6_pullback_buying_support_or_shorting_resistance.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_pullback_buying_support_or_shorting_resistance.md)
-- [Chapter_3_trend_analysis.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_3_trend_analysis.md)
-- [Chapter_3_on_trends.md](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_3_on_trends.md)
+- [Lower-Time-Frame Breakout Pullback Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_pullback_entering_lower_time_frame_breakout.md)
+- [Buying Support Or Shorting Resistance Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_6_pullback_buying_support_or_shorting_resistance.md)
+- [Trend Analysis Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_3_trend_analysis.md)
+- [On Trends Note](/Users/rositsashopova/Documents/Projects/forex/Book%20Notes/Journal%20notes/Art%20and%20Science%20notes/Chapter_3_on_trends.md)
 
 ## Secondary Visual Forms
 
@@ -94,10 +94,10 @@ These are not separate trigger families. They are visual subtypes that must reso
 
 Useful references:
 
-- [big_shadow.md](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/some-investment-books/books/big_shadow.md)
-- [naked_forex.md](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/some-investment-books/books/naked_forex.md)
-- [Correction Quality Guide.md](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/Correction%20Quality%20Guide.md)
-- [Impulse Identification Guide.md](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/Impulse%20Identification%20Guide.md)
+- [Big Shadow Reference](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/some-investment-books/books/big_shadow.md)
+- [Naked Forex Reference](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/some-investment-books/books/naked_forex.md)
+- [Correction Quality Guide](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/Correction%20Quality%20Guide.md)
+- [Impulse Identification Guide](/Users/rositsashopova/Documents/Projects/forex/Reading%20Materials/Impulse%20Identification%20Guide.md)
 
 ## What Is Not a Trigger
 
